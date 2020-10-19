@@ -22,7 +22,10 @@ fn main() {
 }
 
 fn deal(mut game_state: GameState) -> GameState {
-    for player in game_state.players.iter_mut() {
+    let player_count = game_state.players.len();
+
+    for player_index in (0..player_count).cycle() {
+        let player = &mut game_state.players[player_index];
         if let Some(card) = game_state.deck.cards.pop() {
             player
                 .hand
