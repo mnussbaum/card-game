@@ -19,19 +19,19 @@ impl Default for Deck {
         for rank in 1..13 {
             deck.cards.push(Card {
                 suit: Suit::Club,
-                rank: Rank::from_u32(rank),
+                rank: Rank::from_usize(rank),
             });
             deck.cards.push(Card {
                 suit: Suit::Diamond,
-                rank: Rank::from_u32(rank),
+                rank: Rank::from_usize(rank),
             });
             deck.cards.push(Card {
                 suit: Suit::Heart,
-                rank: Rank::from_u32(rank),
+                rank: Rank::from_usize(rank),
             });
             deck.cards.push(Card {
                 suit: Suit::Spade,
-                rank: Rank::from_u32(rank),
+                rank: Rank::from_usize(rank),
             });
         }
 
@@ -40,15 +40,15 @@ impl Default for Deck {
 }
 
 #[derive(Debug)]
-enum Suit {
+pub enum Suit {
     Club,
     Diamond,
     Heart,
     Spade,
 }
 
-#[derive(Debug)]
-enum Rank {
+#[derive(Debug, PartialOrd, PartialEq)]
+pub enum Rank {
     LowAce = 1,
     Two = 2,
     Three = 3,
@@ -66,7 +66,7 @@ enum Rank {
 }
 
 impl Rank {
-    fn from_u32(rank: u32) -> Rank {
+    fn from_usize(rank: usize) -> Rank {
         match rank {
             1 => Rank::LowAce,
             2 => Rank::Two,
@@ -89,6 +89,6 @@ impl Rank {
 
 #[derive(Debug)]
 pub struct Card {
-    suit: Suit,
-    rank: Rank,
+    pub suit: Suit,
+    pub rank: Rank,
 }
