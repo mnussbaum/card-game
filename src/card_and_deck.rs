@@ -16,7 +16,7 @@ impl Deck {
 impl Default for Deck {
     fn default() -> Self {
         let mut deck = Deck { cards: vec![] };
-        for rank in 1..13 {
+        for rank in 2..15 {
             deck.cards.push(Card {
                 suit: Suit::Club,
                 rank: Rank::from_usize(rank),
@@ -49,7 +49,6 @@ pub enum Suit {
 
 #[derive(Debug, PartialOrd, PartialEq)]
 pub enum Rank {
-    LowAce = 1,
     Two = 2,
     Three = 3,
     Four = 4,
@@ -62,13 +61,12 @@ pub enum Rank {
     Jack = 11,
     Queen = 12,
     King = 13,
-    HighAce = 14,
+    Ace = 14,
 }
 
 impl Rank {
-    fn from_usize(rank: usize) -> Rank {
+    pub fn from_usize(rank: usize) -> Rank {
         match rank {
-            1 => Rank::LowAce,
             2 => Rank::Two,
             3 => Rank::Three,
             4 => Rank::Four,
@@ -81,7 +79,7 @@ impl Rank {
             11 => Rank::Jack,
             12 => Rank::Queen,
             13 => Rank::King,
-            14 => Rank::HighAce,
+            14 => Rank::Ace,
             _ => panic!("Unknown rank: {}", rank),
         }
     }
