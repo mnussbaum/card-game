@@ -1,26 +1,19 @@
-use std::collections::HashMap;
-
 use text_io::read;
 
 mod card_and_deck;
 use card_and_deck::{Card, Deck, Rank};
 
 fn main() {
-    let mut players: HashMap<usize, Player> = HashMap::new();
-    players.insert(
-        0,
+    let players: Vec<Player> = vec![
         Player {
             name: "Alice".into(),
             hand: Default::default(),
         },
-    );
-    players.insert(
-        1,
         Player {
             name: "Bob".into(),
             hand: Default::default(),
         },
-    );
+    ];
     let deck: Deck = Default::default();
     let deck = deck.shuffle();
     let communal_cards: Vec<Card> = vec![];
@@ -39,22 +32,19 @@ fn play_game(mut game_state: GameState) {
     for player_index in (0..player_count).cycle() {
         // TODO: Playing out of turn like for completions
         // TODO: Move current turn holder into game state
-        if let Some(mut player) = game_state.players.remove(&player_index) {
-            println!("Your cards: {:#?}", player.hand.cards);
-            println!("Last played card: {:#?}", game_state.communal_cards.last());
+        let mut player = game_state.players.remove(player_index);
+        println!("Your cards: {:#?}", player.hand.cards);
+        println!("Last played card: {:#?}", game_state.communal_cards.last());
 
-            play_turn(&mut game_state, &mut player);
+        play_turn(&mut game_state, &mut player);
 
-            if player.hand.cards.len() == 0 {
-                println!("{} wins!", player.name);
-                game_state.players.insert(player_index, player);
-                return;
-            }
-
+        if player.hand.cards.len() == 0 {
+            println!("{} wins!", player.name);
             game_state.players.insert(player_index, player);
-        } else {
-            panic!("Tried to play a non-existent player!");
+            return;
         }
+
+        game_state.players.insert(player_index, player);
     }
 }
 
@@ -133,19 +123,16 @@ fn deal(mut game_state: GameState) -> GameState {
     let player_count = game_state.players.len();
 
     for player_index in (0..player_count).cycle() {
-        if let Some(mut player) = game_state.players.remove(&player_index) {
-            if let Some(card) = game_state.deck.cards.pop() {
-                player
-                    .hand
-                    .cards
-                    .insert(player.hand.cards.len() as usize, card);
-                game_state.players.insert(player_index, player);
-            } else {
-                game_state.players.insert(player_index, player);
-                break;
-            }
+        let mut player = game_state.players.remove(player_index);
+        if let Some(card) = game_state.deck.cards.pop() {
+            player
+                .hand
+                .cards
+                .insert(player.hand.cards.len() as usize, card);
+            game_state.players.insert(player_index, player);
         } else {
-            panic!("Tried to play a non-existent player!");
+            game_state.players.insert(player_index, player);
+            break;
         }
     }
 
@@ -156,7 +143,7 @@ fn deal(mut game_state: GameState) -> GameState {
 struct GameState {
     communal_cards: Vec<Card>,
     deck: Deck,
-    players: HashMap<usize, Player>,
+    players: Vec<Player>,
 }
 
 #[derive(Debug, Default)]
