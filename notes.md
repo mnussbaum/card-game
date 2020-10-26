@@ -28,3 +28,20 @@
     2. Conditions to end game for a player
       1. Out of cards
       2. Out of points
+
+* Poll each player to see what actions they can do at the start of every round
+* Whether or not it's a players turn should be a piece of state that just opens
+  up more actions
+* Need to encode every possible action as data so that users can choose the
+  combos
+* Which player is dealer is a piece of state too. Eventually need rules for how
+  dealer moves, what it does
+* Players should have multiple pools of cards to represent the different piles
+* Different card pools are either not visible to any, visible just to player or
+  visible to all, specific card visibility like just top card. Need to define
+  rules for moving cards between pools, how the play interacts with each pool
+* Eventually have a game builder that shows how the pools are layer out on the
+  table
+* After playing each card eval how it's consequences impact each player
+* Consequences should be expressed as noun, verb, subject expressions, eg "next
+  player", "picks up", "to pool xyz", "from communal pool ABC" 
