@@ -1,5 +1,5 @@
 [package]
-name = "card-player"
+name = "card-game"
 version = "0.1.0"
 authors = ["mnussbaum <michaelnussbaum08@gmail.com>"]
 edition = "2018"
