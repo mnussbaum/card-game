@@ -1,7 +1,10 @@
 use text_io::read;
 
-mod card_and_deck;
-use card_and_deck::{Card, Deck, Rank};
+mod card_deck;
+use card_deck::{Card, Deck, Rank};
+
+mod player;
+use player::Player;
 
 fn main() {
     let players: Vec<Player> = vec![
@@ -29,7 +32,7 @@ fn main() {
 }
 
 fn play_game(mut game_state: GameState) {
-    while true {
+    loop {
         // TODO: Playing out of turn like for completions
         // TODO: Move current turn holder into game state
         println!("Last played card: {:#?}", game_state.communal_cards.last());
@@ -157,15 +160,4 @@ impl GameState {
     pub fn advance_player_turn(&mut self) {
         self.player_turn_index = (self.player_turn_index + 1) % self.players.len();
     }
-}
-
-#[derive(Debug, Default)]
-struct Hand {
-    cards: Vec<Card>,
-}
-
-#[derive(Debug)]
-struct Player {
-    name: String,
-    hand: Hand,
 }
