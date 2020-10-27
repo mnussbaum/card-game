@@ -17,9 +17,11 @@ fn main() {
     let deck: Deck = Default::default();
     let deck = deck.shuffle();
     let communal_cards: Vec<Card> = vec![];
+    let player_turn_index = 0;
     let game_state = GameState {
         deck,
         communal_cards,
+        player_turn_index,
         players,
     };
     let game_state = deal(game_state);
@@ -27,33 +29,33 @@ fn main() {
 }
 
 fn play_game(mut game_state: GameState) {
-    let player_count = game_state.players.len();
-
-    for player_index in (0..player_count).cycle() {
+    while true {
         // TODO: Playing out of turn like for completions
         // TODO: Move current turn holder into game state
-        let mut player = game_state.players.remove(player_index);
-        println!("Your cards: {:#?}", player.hand.cards);
         println!("Last played card: {:#?}", game_state.communal_cards.last());
+        let player = game_state.player_on_turn();
+        println!("Your cards: {:#?}", player.hand.cards);
 
-        play_turn(&mut game_state, &mut player);
+        play_turn(&mut game_state);
 
+        let player = game_state.player_on_turn();
         if player.hand.cards.len() == 0 {
             println!("{} wins!", player.name);
-            game_state.players.insert(player_index, player);
             return;
         }
 
-        game_state.players.insert(player_index, player);
+        game_state.advance_player_turn();
     }
 }
 
-fn play_turn(game_state: &mut GameState, player: &mut Player) {
+fn play_turn(game_state: &mut GameState) {
     if game_state.communal_cards.len() > 0 {
         println!("Pick it up (y/N):");
         let pick_it_up_answer: String = read!();
+        // let player = game_state.player_on_turn();
         if pick_it_up_answer == "y" {
-            pick_it_up(game_state, player);
+            // pick_it_up(game_state, player);
+            pick_it_up(game_state);
             return;
         }
     }
@@ -61,13 +63,14 @@ fn play_turn(game_state: &mut GameState, player: &mut Player) {
     println!("What card do you want to play:");
     let card_to_play_index: usize = read!();
 
+    let player = game_state.player_on_turn();
     if card_to_play_index >= player.hand.cards.len() {
         println!("Sorry, card index out of range!");
-        return play_turn(game_state, player);
+        return play_turn(game_state);
     }
 
     let card_to_play = player.hand.cards.remove(card_to_play_index);
-    if valid_card_to_play(&game_state, &card_to_play) {
+    if valid_card_to_play(game_state, &card_to_play) {
         if card_to_play.rank == Rank::from_usize(3) {
             // TODO: Determine next player
             // TODO: Pick it up on next player
@@ -77,7 +80,7 @@ fn play_turn(game_state: &mut GameState, player: &mut Player) {
 
         if card_to_play.rank == Rank::from_usize(10) {
             game_state.communal_cards.drain(0..);
-            play_turn(game_state, player);
+            play_turn(game_state);
             return;
         }
 
@@ -86,6 +89,7 @@ fn play_turn(game_state: &mut GameState, player: &mut Player) {
         if let Some(last_played_card) = game_state.communal_cards.last() {
             if last_played_card.rank == card_to_play.rank {
                 game_state.communal_cards.push(card_to_play);
+                println!("PUSHING");
                 // TODO: Skip next player
                 return;
             }
@@ -94,16 +98,14 @@ fn play_turn(game_state: &mut GameState, player: &mut Player) {
         game_state.communal_cards.push(card_to_play);
     } else {
         println!("Sorry, you can't play that card!");
+        let player = game_state.player_on_turn();
         player.hand.cards.insert(card_to_play_index, card_to_play);
-        return play_turn(game_state, player);
+        return play_turn(game_state);
     }
 }
 
-fn pick_it_up(game_state: &mut GameState, player: &mut Player) {
-    player
-        .hand
-        .cards
-        .extend(game_state.communal_cards.drain(0..));
+fn pick_it_up(game_state: &mut GameState) {
+    // fn pick_it_up(game_state: &mut GameState, player: &mut Player) {
     return;
 }
 
@@ -143,7 +145,18 @@ fn deal(mut game_state: GameState) -> GameState {
 struct GameState {
     communal_cards: Vec<Card>,
     deck: Deck,
+    player_turn_index: usize,
     players: Vec<Player>,
+}
+
+impl GameState {
+    pub fn player_on_turn(&mut self) -> &mut Player {
+        return &mut self.players[self.player_turn_index];
+    }
+
+    pub fn advance_player_turn(&mut self) {
+        self.player_turn_index = (self.player_turn_index + 1) % self.players.len();
+    }
 }
 
 #[derive(Debug, Default)]
