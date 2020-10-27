@@ -1,0 +1,247 @@
+---
+min_player_count: 2
+max_player_count: 4
+
+player_hand:
+  blind_cards:
+    max_card_limit: 3
+    playable: false
+    visibility: FaceDown
+  lower_cards:
+    max_card_limit: 3
+    playable: false
+    visibility: FaceUp
+  hand_cards:
+    max_card_limit: 3
+    playable: false
+    visibility: VisibleToOwner
+
+communal_cards:
+  active_pile:
+    playable: true
+    visibility: TopFaceUpRestFaceDown
+  discard_pile:
+    playable: false
+    visibility: FaceDown
+
+cards:
+  Two:
+    value: Wild
+    consequences:
+      - verb: ConstrainPlayableCards
+        object: CardsMustBeSameRank
+      - verb: MoveNextTurn
+        object:
+          relative_player: 1
+  Three:
+    value: Wild
+    consequences:
+      - verb: ConstrainPlayableCards
+        object: CardsMustBeSameRank
+      - verb: MoveCards
+        object:
+          card_move:
+            card_group_name_source:
+              card_group_id:
+                owner:
+                  name: communal_cards
+                name: active_pile
+            card_group_name_dest:
+              card_group_id:
+                owner:
+                  relative_player: 1
+                name: hand_cards
+      - verb: MoveNextTurn
+        object:
+          relative_player: 2
+  Four:
+    value: 1
+    consequences:
+      - verb: ConstrainPlayableCards
+        object:
+          minimum_playable_card: LastPlayedCard
+      - verb: ConstrainPlayableCards
+        object: CardsMustBeSameRank
+      - verb: MoveNextTurn
+        object:
+          relative_player: 1
+  Five:
+    value: 2
+    consequences:
+      - verb: ConstrainPlayableCards
+        object: CardsMustBeSameRank
+      - verb: ConstrainPlayableCards
+        object:
+          minimum_playable_card: LastPlayedCard
+      - verb: MoveNextTurn
+        object:
+          relative_player: 1
+  Six:
+    value: 3
+    consequences:
+      - verb: ConstrainPlayableCards
+        object: CardsMustBeSameRank
+      - verb: ConstrainPlayableCards
+        object:
+          minimum_playable_card: LastPlayedCard
+      - verb: MoveNextTurn
+        object:
+          relative_player: 1
+  Seven:
+    value: 4
+    consequences:
+      - verb: ConstrainPlayableCards
+        object: CardsMustBeSameRank
+      - verb: ConstrainPlayableCards
+        object:
+          minimum_playable_card: LastPlayedCard
+      - verb: MoveNextTurn
+        object:
+          relative_player: 1
+  Eight:
+    value: 5
+    consequences:
+      - verb: ConstrainPlayableCards
+        object: CardsMustBeSameRank
+      - verb: ConstrainPlayableCards
+        object:
+          minimum_playable_card: LastPlayedCard
+      - verb: MoveNextTurn
+        object:
+          relative_player: 1
+  Nine:
+    value: 6
+    consequences:
+      - verb: ConstrainPlayableCards
+        object: CardsMustBeSameRank
+      - verb: ConstrainPlayableCards
+        object:
+          minimum_playable_card: LastPlayedCard
+      - verb: MoveNextTurn
+        object:
+          relative_player: 1
+  Ten:
+    value: Wild
+    consequences:
+      - verb: ConstrainPlayableCards
+        object: CardsMustBeSameRank
+      - verb: MoveCards
+        object:
+          card_move:
+            card_group_name_source:
+              card_group_id:
+                owner:
+                  name: communal_cards
+                name: active_pile
+            card_group_name_dest:
+              card_group_id:
+                owner:
+                  name: communal_cards
+                name: discard_pile
+      - verb: MoveNextTurn
+        object:
+          relative_player: 0
+  Jack:
+    value: 7
+    consequences:
+      - verb: ConstrainPlayableCards
+        object: CardsMustBeSameRank
+      - verb: ConstrainPlayableCards
+        object:
+          minimum_playable_card: LastPlayedCard
+      - verb: MoveNextTurn
+        object:
+          relative_player: 1
+  Queen:
+    value: 8
+    consequences:
+      - verb: ConstrainPlayableCards
+        object: CardsMustBeSameRank
+      - verb: ConstrainPlayableCards
+        object:
+          minimum_playable_card: LastPlayedCard
+      - verb: MoveNextTurn
+        object:
+          relative_player: 1
+  King:
+    value: 9
+    consequences:
+      - verb: ConstrainPlayableCards
+        object: CardsMustBeSameRank
+      - verb: ConstrainPlayableCards
+        object:
+          minimum_playable_card: LastPlayedCard
+      - verb: MoveNextTurn
+        object:
+          relative_player: 1
+  Ace:
+    value: 10
+    consequences:
+      - verb: ConstrainPlayableCards
+        object: CardsMustBeSameRank
+      - verb: ConstrainPlayableCards
+        object:
+          minimum_playable_card: LastPlayedCard
+      - verb: MoveNextTurn
+        object:
+          relative_player: 1
+
+turn_actions:
+  0..0:
+    - verb: MoveCards
+      object:
+        card_move:
+          card_group_name_source:
+            card_group_id:
+              owner:
+                relative_player: 0
+              name: hand_cards
+          card_group_name_dest:
+            card_group_id:
+              owner:
+                relative_player: 0
+              name: lower_cards
+    - verb: MoveCards
+      object:
+        card_move:
+          card_group_name_source:
+            card_group_id:
+              owner:
+                relative_player: 0
+              name: lower_cards
+          card_group_name_dest:
+            card_group_id:
+              owner:
+                relative_player: 0
+              name: hand_cards
+  1..:
+    - verb: MoveCards
+      object:
+        card_move:
+          card_group_name_source:
+            card_group_id:
+              owner:
+                name: communal_cards
+              name: active_pile
+          card_group_name_dest:
+            card_group_id:
+              owner:
+                relative_player: 0
+              name: hand_cards
+    - verb: MoveCards
+      object:
+        card_move:
+          card_group_name_source:
+            card_group_id:
+              owner:
+                relative_player: 0
+              name: hand_cards
+          card_group_name_dest:
+            card_group_id:
+              owner:
+                name: communal_cards
+              name: active_pile
+
+ending_conditions:
+  - player_count: AllButOnePlayer
+    card_count: 0

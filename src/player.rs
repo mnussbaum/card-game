@@ -1,12 +1,9 @@
-use crate::card_deck::Card;
+use std::collections::HashMap;
 
-#[derive(Debug, Default)]
-pub struct Hand {
-    pub cards: Vec<Card>,
-}
+use crate::card_deck::CardGroup;
 
 #[derive(Debug)]
 pub struct Player {
     pub name: String,
-    pub hand: Hand,
+    pub card_pools: HashMap<String, CardGroup>,
 }

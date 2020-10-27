@@ -21,19 +21,19 @@ impl Default for Deck {
         for rank in 2..15 {
             deck.cards.push(Card {
                 suit: Suit::Club,
-                rank: Rank::from_usize(rank),
+                rank: CardRank::from_usize(rank),
             });
             deck.cards.push(Card {
                 suit: Suit::Diamond,
-                rank: Rank::from_usize(rank),
+                rank: CardRank::from_usize(rank),
             });
             deck.cards.push(Card {
                 suit: Suit::Heart,
-                rank: Rank::from_usize(rank),
+                rank: CardRank::from_usize(rank),
             });
             deck.cards.push(Card {
                 suit: Suit::Spade,
-                rank: Rank::from_usize(rank),
+                rank: CardRank::from_usize(rank),
             });
         }
 
@@ -60,65 +60,70 @@ impl Suit {
     }
 }
 
-#[derive(Debug, PartialOrd, PartialEq)]
-pub enum Rank {
-    Two = 2,
-    Three = 3,
-    Four = 4,
-    Five = 5,
-    Six = 6,
-    Seven = 7,
-    Eight = 8,
-    Nine = 9,
-    Ten = 10,
-    Jack = 11,
-    Queen = 12,
-    King = 13,
-    Ace = 14,
+pub enum CardValue {
+    Wild,
+    Numeric(usize),
 }
 
-impl Rank {
-    pub fn from_usize(rank: usize) -> Rank {
+#[derive(Debug, PartialOrd, PartialEq)]
+pub enum CardRank {
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+    Seven,
+    Eight,
+    Nine,
+    Ten,
+    Jack,
+    Queen,
+    King,
+    Ace,
+}
+
+impl CardRank {
+    pub fn from_usize(rank: usize) -> CardRank {
         match rank {
-            2 => Rank::Two,
-            3 => Rank::Three,
-            4 => Rank::Four,
-            5 => Rank::Five,
-            6 => Rank::Six,
-            7 => Rank::Seven,
-            8 => Rank::Eight,
-            9 => Rank::Nine,
-            10 => Rank::Ten,
-            11 => Rank::Jack,
-            12 => Rank::Queen,
-            13 => Rank::King,
-            14 => Rank::Ace,
+            2 => CardRank::Two,
+            3 => CardRank::Three,
+            4 => CardRank::Four,
+            5 => CardRank::Five,
+            6 => CardRank::Six,
+            7 => CardRank::Seven,
+            8 => CardRank::Eight,
+            9 => CardRank::Nine,
+            10 => CardRank::Ten,
+            11 => CardRank::Jack,
+            12 => CardRank::Queen,
+            13 => CardRank::King,
+            14 => CardRank::Ace,
             _ => panic!("Unknown rank: {}", rank),
         }
     }
 
     pub fn unicode_code_point(&self) -> u32 {
         match self {
-            Rank::Two => 0x2,
-            Rank::Three => 0x3,
-            Rank::Four => 0x4,
-            Rank::Five => 0x5,
-            Rank::Six => 0x6,
-            Rank::Seven => 0x7,
-            Rank::Eight => 0x8,
-            Rank::Nine => 0x9,
-            Rank::Ten => 0xA,
-            Rank::Jack => 0xB,
-            Rank::Queen => 0xD,
-            Rank::King => 0xE,
-            Rank::Ace => 0x1,
+            CardRank::Two => 0x2,
+            CardRank::Three => 0x3,
+            CardRank::Four => 0x4,
+            CardRank::Five => 0x5,
+            CardRank::Six => 0x6,
+            CardRank::Seven => 0x7,
+            CardRank::Eight => 0x8,
+            CardRank::Nine => 0x9,
+            CardRank::Ten => 0xA,
+            CardRank::Jack => 0xB,
+            CardRank::Queen => 0xD,
+            CardRank::King => 0xE,
+            CardRank::Ace => 0x1,
         }
     }
 }
 
 pub struct Card {
     pub suit: Suit,
-    pub rank: Rank,
+    pub rank: CardRank,
 }
 
 impl fmt::Debug for Card {
@@ -146,4 +151,19 @@ impl fmt::Display for Card {
             .to_string(),
         )
     }
+}
+
+#[derive(Debug)]
+pub enum CardGroupVisibility {
+    FaceDown,
+    FaceUp,
+    TopFaceUpRestFaceDown,
+    VisibleToOwner,
+}
+
+#[derive(Debug)]
+pub struct CardGroup {
+    pub cards: Vec<Card>,
+    pub max_card_limit: Option<usize>,
+    pub visibility: CardGroupVisibility,
 }

@@ -45,3 +45,7 @@
 * After playing each card eval how it's consequences impact each player
 * Consequences should be expressed as noun, verb, subject expressions, eg "next
   player", "picks up", "to pool xyz", "from communal pool ABC" 
+* Need way to say "if turn == 0 then player has these actions"
+* Need way to say "if turn > 0 and player on turn then player has these default actions"
+* Need way to transition card groups to be playable
+* Consequences will eventually need a priority to resolve conflicts
