@@ -4,7 +4,7 @@ use std::fs;
 use text_io::read;
 
 mod card_deck;
-use card_deck::{Card, CardRank, Deck};
+use card_deck::{Card, CardGroup, CardRank, Deck};
 
 mod player;
 use player::Player;
@@ -16,20 +16,27 @@ fn main() {
     let yams =
         fs::read_to_string("poo_head_rules.yaml").expect("Something went wrong reading the file");
     let game_rules: GameRules = serde_yaml::from_str(&yams).unwrap();
-    println!("{:#?}", game_rules);
-    let players: Vec<Player> = vec![
+    // TODO: Get players from user. Use min and max player count from game rules
+    let mut players: Vec<Player> = vec![
         Player {
             name: "Alice".into(),
-            card_pools: HashMap::new(),
+            hand: HashMap::new(),
         },
         Player {
             name: "Bob".into(),
-            card_pools: HashMap::new(),
+            hand: HashMap::new(),
         },
     ];
+
+    for mut player in &mut players {
+        player.hand = game_rules.player_hand.clone();
+    }
+
+    // TODO: Build deck from game rules
     let deck: Deck = Default::default();
     let deck = deck.shuffle();
-    let communal_cards: Vec<Card> = vec![];
+
+    let communal_cards = game_rules.communal_cards.clone();
     let player_turn_index = 0;
     let game_state = GameState {
         deck,
@@ -37,14 +44,15 @@ fn main() {
         player_turn_index,
         players,
     };
-    // let game_state = deal(game_state);
+
+    let game_state = deal(&game_rules, game_state);
+    println!("{:?}", game_state.players[0].hand);
+
     play_game(game_state)
 }
 
 fn play_game(mut game_state: GameState) {
     loop {
-        // TODO: Playing out of turn like for completions
-        // TODO: Move current turn holder into game state
         // println!("Last played card: {:#?}", game_state.communal_cards.last());
         // let player = game_state.player_on_turn();
         // println!("Your cards: {:#?}", player.hand.cards);
@@ -133,30 +141,10 @@ fn play_game(mut game_state: GameState) {
 //         true
 //     }
 // }
-//
-// fn deal(mut game_state: GameState) -> GameState {
-//     let player_count = game_state.players.len();
-//
-//     for player_index in (0..player_count).cycle() {
-//         let mut player = game_state.players.remove(player_index);
-//         if let Some(card) = game_state.deck.cards.pop() {
-//             player
-//                 .hand
-//                 .cards
-//                 .insert(player.hand.cards.len() as usize, card);
-//             game_state.players.insert(player_index, player);
-//         } else {
-//             game_state.players.insert(player_index, player);
-//             break;
-//         }
-//     }
-//
-//     return game_state;
-// }
 
 #[derive(Debug)]
 struct GameState {
-    communal_cards: Vec<Card>,
+    communal_cards: HashMap<String, CardGroup>,
     deck: Deck,
     player_turn_index: usize,
     players: Vec<Player>,
@@ -170,4 +158,49 @@ impl GameState {
     pub fn advance_player_turn(&mut self) {
         self.player_turn_index = (self.player_turn_index + 1) % self.players.len();
     }
+}
+
+fn deal(game_rules: &GameRules, mut game_state: GameState) -> GameState {
+    let player_count = game_state.players.len();
+
+    for (player_hand_name, player_hand_rules) in game_rules.player_hand.iter() {
+        let mut hand_at_initial_deal_count_for_all_players = false;
+
+        for player_index in (0..player_count).cycle() {
+            if player_index == 0 && hand_at_initial_deal_count_for_all_players {
+                break;
+            } else {
+                hand_at_initial_deal_count_for_all_players = true
+            }
+
+            let player = game_state
+                .players
+                .get_mut(player_index)
+                .expect("Error getting a player by index");
+            let player_hand = player.hand.get_mut(player_hand_name).expect(&format!(
+                "Player {} is missing hand {}",
+                player.name, player_hand_name
+            ));
+
+            if let Some(initial_deal_count) = player_hand_rules.initial_deal_count {
+                if player_hand.cards.len() >= initial_deal_count {
+                    continue;
+                } else {
+                    hand_at_initial_deal_count_for_all_players = false;
+                }
+            }
+
+            if let Some(card) = game_state.deck.cards.pop() {
+                player_hand
+                    .cards
+                    .insert(player_hand.cards.len() as usize, card);
+            } else {
+                // If there aren't enough cards to finish dealing I abruptly
+                // return here. Is this behavior correct? Should it be configurable?
+                return game_state;
+            }
+        }
+    }
+
+    return game_state;
 }

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::card_deck::{CardGroup, CardRank, CardValue};
 
 // TODO: Start here
-// 1. Serialize game rule yaml to objects
+// x. Serialize game rule yaml to objects
 // 2. Use rules to drive play
 //
 // First gather the actions available to a player from the defaults

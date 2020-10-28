@@ -43,7 +43,7 @@ impl Default for Deck {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Suit {
     Club,
     Diamond,
@@ -68,7 +68,7 @@ pub enum CardValue {
     Numeric(usize),
 }
 
-#[derive(Debug, PartialOrd, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialOrd, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CardRank {
     Two,
     Three,
@@ -124,7 +124,7 @@ impl CardRank {
     }
 }
 
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Card {
     pub suit: Suit,
     pub rank: CardRank,
@@ -157,7 +157,7 @@ impl fmt::Display for Card {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum CardGroupVisibility {
     FaceDown,
     FaceUp,
@@ -165,11 +165,48 @@ pub enum CardGroupVisibility {
     VisibleToOwner,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardGroup {
     #[serde(default)]
     pub cards: Vec<Card>,
 
-    pub max_card_limit: Option<usize>,
+    pub initial_deal_count: Option<usize>,
     pub visibility: CardGroupVisibility,
+}
+
+impl fmt::Debug for CardGroup {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+const PLAYING_CARD_BACK: &str = "🂠 ";
+
+// TODO: Fix visible only to owner once users have different outputs
+impl fmt::Display for CardGroup {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let string_repr = match self.visibility {
+            CardGroupVisibility::FaceDown => self
+                .cards
+                .iter()
+                .map(|_| PLAYING_CARD_BACK.to_string())
+                .collect::<Vec<String>>()
+                .join(", "),
+            CardGroupVisibility::FaceUp | CardGroupVisibility::VisibleToOwner => self
+                .cards
+                .iter()
+                .map(|c| c.to_string())
+                .collect::<Vec<String>>()
+                .join(", "),
+            CardGroupVisibility::TopFaceUpRestFaceDown => {
+                if self.cards.len() == 0 {
+                    "".to_string()
+                } else {
+                    self.cards[0].to_string()
+                }
+            }
+        };
+
+        write!(f, "{}", string_repr,)
+    }
 }

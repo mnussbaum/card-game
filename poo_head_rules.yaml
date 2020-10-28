@@ -4,13 +4,13 @@ max_player_count: 4
 
 player_hand:
   blind_cards:
-    max_card_limit: 3
+    initial_deal_count: 3
     visibility: FaceDown
   lower_cards:
-    max_card_limit: 3
+    initial_deal_count: 3
     visibility: FaceUp
   hand_cards:
-    max_card_limit: 3
+    initial_deal_count: 3
     visibility: VisibleToOwner
 
 communal_cards:
