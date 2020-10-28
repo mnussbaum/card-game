@@ -174,6 +174,20 @@ pub struct CardGroup {
     pub visibility: CardGroupVisibility,
 }
 
+impl CardGroup {
+    pub fn at_or_over_initial_deal_size(&self) -> Option<bool> {
+        if let Some(initial_deal_count) = self.initial_deal_count {
+            if self.cards.len() >= initial_deal_count {
+                return Some(true);
+            } else {
+                return Some(false);
+            }
+        }
+
+        return None;
+    }
+}
+
 impl fmt::Debug for CardGroup {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
