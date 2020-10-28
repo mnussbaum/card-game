@@ -13,6 +13,11 @@ use crate::card_deck::{CardGroup, CardRank, CardValue};
 // that to winnow out actions
 // After user plays card re-eval consequences to handle if eg the player can play again
 // Played cards are going to need a record of who played them
+//
+// Actions are going to need consequences too
+// Some actions are required, others are optional
+// Consequences need conditions
+// Actions need names
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Verb {
@@ -53,9 +58,15 @@ pub enum Object {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct Condition {}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Play {
     pub verb: Verb,
     pub object: Object,
+
+    #[serde(default)]
+    pub conditions: Vec<Condition>,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]

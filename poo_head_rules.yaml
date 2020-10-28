@@ -14,9 +14,13 @@ player_hand:
     visibility: VisibleToOwner
 
 communal_cards:
+  draw_pile:
+    visibility: FaceDown
   active_pile:
     visibility: TopFaceUpRestFaceDown
+    initial_deal_count: 0
   discard_pile:
+    initial_deal_count: 0
     visibility: FaceDown
 
 cards:
@@ -205,8 +209,7 @@ turn_actions:
   ? Bounded:
       min: 0
       max: 0
-  :
-    - verb: MoveCards
+  : - verb: MoveCards
       object:
         CardMove:
           card_group_name_source:
@@ -234,7 +237,85 @@ turn_actions:
             name: hand_cards
   ? LowerBounded:
       min: 1
-  :
+  : - verb: MoveCards
+      conditions:
+        - card_group_size:
+            card_group_name:
+              owner:
+                RelativePlayer:
+                  offset_from_current_player: 0
+              name: hand_cards
+            operator: ">="
+            compare_to: 0
+      object:
+        CardMove:
+          card_group_name_source:
+            owner:
+              RelativePlayer:
+                offset_from_current_player: 0
+            name: hand_cards
+          card_group_name_dest:
+            owner:
+              Name: communal_cards
+            name: active_pile
+    - verb: MoveCards
+      conditions:
+        - card_group_size:
+            card_group_name:
+              owner:
+                RelativePlayer:
+                  offset_from_current_player: 0
+              name: lower_cards
+            operator: ">="
+            compare_to: 0
+        - card_group_size:
+            card_group_name:
+              owner:
+                RelativePlayer:
+                  offset_from_current_player: 0
+              name: hand_cards
+            operator: "=="
+            compare_to: 0
+      object:
+        CardMove:
+          card_group_name_source:
+            owner:
+              RelativePlayer:
+                offset_from_current_player: 0
+            name: lower_cards
+          card_group_name_dest:
+            owner:
+              Name: communal_cards
+            name: active_pile
+    - verb: MoveCards
+      conditions:
+        - card_group_size:
+            card_group_name:
+              owner:
+                RelativePlayer:
+                  offset_from_current_player: 0
+              name: lower_cards
+            operator: "=="
+            compare_to: 0
+        - card_group_size:
+            card_group_name:
+              owner:
+                RelativePlayer:
+                  offset_from_current_player: 0
+              name: hand_cards
+            operator: "=="
+            compare_to: 0
+      object:
+        CardMove:
+          card_group_name_source:
+            owner:
+              RelativePlayer:
+                offset_from_current_player: 0
+            name: blind_cards
+          card_group_name_dest:
+            owner:
+              Name: communal_cards
+            name: active_pile
     - verb: MoveCards
       object:
         CardMove:
@@ -247,18 +328,6 @@ turn_actions:
               RelativePlayer:
                 offset_from_current_player: 0
             name: hand_cards
-    - verb: MoveCards
-      object:
-        CardMove:
-          card_group_name_source:
-            owner:
-              RelativePlayer:
-                offset_from_current_player: 0
-            name: hand_cards
-          card_group_name_dest:
-            owner:
-              Name: communal_cards
-            name: active_pile
 
 ending_conditions:
   - player_count: AllButOnePlayer

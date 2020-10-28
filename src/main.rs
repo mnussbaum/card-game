@@ -47,12 +47,17 @@ fn main() {
 
     let game_state = deal(&game_rules, game_state);
     println!("{:?}", game_state.players[0].hand);
+    println!("{:?}", game_state.communal_cards);
 
-    play_game(game_state)
+    play_game(&game_rules, game_state)
 }
 
-fn play_game(mut game_state: GameState) {
+fn play_game(game_rules: &GameRules, mut game_state: GameState) {
     loop {
+        // Get actions player can take from rules
+        // Get consequences from last played card
+        // Apply consequences
+        //
         // println!("Last played card: {:#?}", game_state.communal_cards.last());
         // let player = game_state.player_on_turn();
         // println!("Your cards: {:#?}", player.hand.cards);
@@ -182,6 +187,7 @@ fn deal(game_rules: &GameRules, mut game_state: GameState) -> GameState {
                 player.name, player_hand_name
             ));
 
+            // TODO: Push this into a method on the card group
             if let Some(initial_deal_count) = player_hand_rules.initial_deal_count {
                 if player_hand.cards.len() >= initial_deal_count {
                     continue;
@@ -199,6 +205,24 @@ fn deal(game_rules: &GameRules, mut game_state: GameState) -> GameState {
                 // return here. Is this behavior correct? Should it be configurable?
                 return game_state;
             }
+        }
+    }
+
+    for (_, communal_card_group) in game_state.communal_cards.iter_mut() {
+        if let Some(initial_deal_count) = communal_card_group.initial_deal_count {
+            if communal_card_group.cards.len() >= initial_deal_count {
+                continue;
+            }
+        }
+
+        if let Some(card) = game_state.deck.cards.pop() {
+            communal_card_group
+                .cards
+                .insert(communal_card_group.cards.len() as usize, card);
+        } else {
+            // If there aren't enough cards to finish dealing I abruptly
+            // return here. Is this behavior correct? Should it be configurable?
+            return game_state;
         }
     }
 
