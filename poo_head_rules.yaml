@@ -27,18 +27,16 @@ cards:
   Two:
     value: Wild
     consequences:
-      - verb: ConstrainPlayableCards
-        object: CardsMustBeSameRank
-      - verb: MoveNextTurn
+      - description: "Next player's turn"
+        verb: MoveNextTurn
         object:
           RelativePlayer:
             offset_from_current_player: 1
   Three:
     value: Wild
     consequences:
-      - verb: ConstrainPlayableCards
-        object: CardsMustBeSameRank
-      - verb: MoveCards
+      - description: "Threes are wild and make the next player _pick-up the deck_ their turn"
+        verb: MoveCards
         object:
           CardMove:
             card_group_name_source:
@@ -50,7 +48,8 @@ cards:
                 RelativePlayer:
                   offset_from_current_player: 1
               name: hand_cards
-      - verb: MoveNextTurn
+      - description: "Threes are wild and make the next player pick-up the deck _as their turn_"
+        verb: MoveNextTurn
         object:
           RelativePlayer:
             offset_from_current_player: 2
@@ -58,12 +57,12 @@ cards:
     value:
       Numeric: 1
     consequences:
-      - verb: ConstrainPlayableCards
+      - description: "Cards must be same rank or higher than the last played card"
+        verb: ConstrainPlayableCards
         object:
           MinimumPlayableCard: LastPlayedCard
-      - verb: ConstrainPlayableCards
-        object: CardsMustBeSameRank
-      - verb: MoveNextTurn
+      - description: "Next player's turn"
+        verb: MoveNextTurn
         object:
           RelativePlayer:
             offset_from_current_player: 1
@@ -71,12 +70,12 @@ cards:
     value:
       Numeric: 2
     consequences:
-      - verb: ConstrainPlayableCards
-        object: CardsMustBeSameRank
-      - verb: ConstrainPlayableCards
+      - description: "Cards must be same rank or higher than the last played card"
+        verb: ConstrainPlayableCards
         object:
           MinimumPlayableCard: LastPlayedCard
-      - verb: MoveNextTurn
+      - description: "Next player's turn"
+        verb: MoveNextTurn
         object:
           RelativePlayer:
             offset_from_current_player: 1
@@ -84,12 +83,12 @@ cards:
     value:
       Numeric: 3
     consequences:
-      - verb: ConstrainPlayableCards
-        object: CardsMustBeSameRank
-      - verb: ConstrainPlayableCards
+      - description: "Cards must be same rank or higher than the last played card"
+        verb: ConstrainPlayableCards
         object:
           MinimumPlayableCard: LastPlayedCard
-      - verb: MoveNextTurn
+      - description: "Next player's turn"
+        verb: MoveNextTurn
         object:
           RelativePlayer:
             offset_from_current_player: 1
@@ -97,12 +96,12 @@ cards:
     value:
       Numeric: 4
     consequences:
-      - verb: ConstrainPlayableCards
-        object: CardsMustBeSameRank
-      - verb: ConstrainPlayableCards
+      - description: "Cards must be same rank or higher than the last played card"
+        verb: ConstrainPlayableCards
         object:
           MinimumPlayableCard: LastPlayedCard
-      - verb: MoveNextTurn
+      - description: "Next player's turn"
+        verb: MoveNextTurn
         object:
           RelativePlayer:
             offset_from_current_player: 1
@@ -110,12 +109,12 @@ cards:
     value:
       Numeric: 5
     consequences:
-      - verb: ConstrainPlayableCards
-        object: CardsMustBeSameRank
-      - verb: ConstrainPlayableCards
+      - description: "Cards must be same rank or higher than the last played card"
+        verb: ConstrainPlayableCards
         object:
           MinimumPlayableCard: LastPlayedCard
-      - verb: MoveNextTurn
+      - description: "Next player's turn"
+        verb: MoveNextTurn
         object:
           RelativePlayer:
             offset_from_current_player: 1
@@ -123,21 +122,20 @@ cards:
     value:
       Numeric: 6
     consequences:
-      - verb: ConstrainPlayableCards
-        object: CardsMustBeSameRank
-      - verb: ConstrainPlayableCards
+      - description: "Cards must be same rank or higher than the last played card"
+        verb: ConstrainPlayableCards
         object:
           MinimumPlayableCard: LastPlayedCard
-      - verb: MoveNextTurn
+      - description: "Next player's turn"
+        verb: MoveNextTurn
         object:
           RelativePlayer:
             offset_from_current_player: 1
   Ten:
     value: Wild
     consequences:
-      - verb: ConstrainPlayableCards
-        object: CardsMustBeSameRank
-      - verb: MoveCards
+      - description: "Tens are wild, _discard the active pile_, and let the player play again"
+        verb: MoveCards
         object:
           CardMove:
             card_group_name_source:
@@ -148,7 +146,8 @@ cards:
               owner:
                 Name: communal_cards
               name: discard_pile
-      - verb: MoveNextTurn
+      - description: "Tens are wild, discard the active pile, and _let the player play again_"
+        verb: MoveNextTurn
         object:
           RelativePlayer:
             offset_from_current_player: 0
@@ -156,12 +155,12 @@ cards:
     value:
       Numeric: 7
     consequences:
-      - verb: ConstrainPlayableCards
-        object: CardsMustBeSameRank
-      - verb: ConstrainPlayableCards
+      - description: "Cards must be same rank or higher than the last played card"
+        verb: ConstrainPlayableCards
         object:
           MinimumPlayableCard: LastPlayedCard
-      - verb: MoveNextTurn
+      - description: "Next player's turn"
+        verb: MoveNextTurn
         object:
           RelativePlayer:
             offset_from_current_player: 1
@@ -169,12 +168,12 @@ cards:
     value:
       Numeric: 8
     consequences:
-      - verb: ConstrainPlayableCards
-        object: CardsMustBeSameRank
-      - verb: ConstrainPlayableCards
+      - description: "Cards must be same rank or higher than the last played card"
+        verb: ConstrainPlayableCards
         object:
           MinimumPlayableCard: LastPlayedCard
-      - verb: MoveNextTurn
+      - description: "Next player's turn"
+        verb: MoveNextTurn
         object:
           RelativePlayer:
             offset_from_current_player: 1
@@ -182,12 +181,12 @@ cards:
     value:
       Numeric: 9
     consequences:
-      - verb: ConstrainPlayableCards
-        object: CardsMustBeSameRank
-      - verb: ConstrainPlayableCards
+      - description: "Cards must be same rank or higher than the last played card"
+        verb: ConstrainPlayableCards
         object:
           MinimumPlayableCard: LastPlayedCard
-      - verb: MoveNextTurn
+      - description: "Next player's turn"
+        verb: MoveNextTurn
         object:
           RelativePlayer:
             offset_from_current_player: 1
@@ -195,139 +194,168 @@ cards:
     value:
       Numeric: 10
     consequences:
-      - verb: ConstrainPlayableCards
-        object: CardsMustBeSameRank
-      - verb: ConstrainPlayableCards
+      - description: "Cards must be same rank or higher than the last played card"
+        verb: ConstrainPlayableCards
         object:
           MinimumPlayableCard: LastPlayedCard
-      - verb: MoveNextTurn
+      - description: "Next player's turn"
+        verb: MoveNextTurn
         object:
           RelativePlayer:
             offset_from_current_player: 1
 
 turn_actions:
-  ? Bounded:
-      min: 0
-      max: 0
-  : - verb: MoveCards
-      object:
-        CardMove:
-          card_group_name_source:
+  - description: "During setup you can swap cards between your lower cards and hand"
+    verb: SwapCards
+    object:
+      CardSwap:
+        first_card_group_name:
+          owner:
+            RelativePlayer:
+              offset_from_current_player: 0
+          name: hand_cards
+        second_card_group_name:
+          owner:
+            RelativePlayer:
+              offset_from_current_player: 0
+          name: lower_cards
+    conditions:
+      - MustBeInTurnRange:
+          min: 0
+          max: 0
+  - description: "Play from your hand"
+    verb: MoveCards
+    conditions:
+      - MustBeInTurnRange:
+          min: 1
+      - CardGroupSize:
+          card_group_name:
             owner:
               RelativePlayer:
                 offset_from_current_player: 0
             name: hand_cards
-          card_group_name_dest:
+          operator: ">="
+          compare_to: 0
+    object:
+      CardMove:
+        card_group_name_source:
+          owner:
+            RelativePlayer:
+              offset_from_current_player: 0
+          name: hand_cards
+        card_group_name_dest:
+          owner:
+            Name: communal_cards
+          name: active_pile
+        conditions:
+          - CardsMustBeSameRank
+  - description: "Play from your lower cards"
+    verb: MoveCards
+    conditions:
+      - MustBeInTurnRange:
+          min: 1
+      - CardGroupSize:
+          card_group_name:
             owner:
               RelativePlayer:
                 offset_from_current_player: 0
             name: lower_cards
-    - verb: MoveCards
-      object:
-        CardMove:
-          card_group_name_source:
+          operator: ">="
+          compare_to: 0
+      - CardGroupSize:
+          card_group_name:
+            owner:
+              RelativePlayer:
+                offset_from_current_player: 0
+            name: hand_cards
+          operator: "=="
+          compare_to: 0
+    object:
+      CardMove:
+        card_group_name_source:
+          owner:
+            RelativePlayer:
+              offset_from_current_player: 0
+          name: lower_cards
+        card_group_name_dest:
+          owner:
+            Name: communal_cards
+          name: active_pile
+        conditions:
+          - CardsMustBeSameRank
+  - description: "Play from your blind cards"
+    verb: MoveCards
+    conditions:
+      - MustBeInTurnRange:
+          min: 1
+      - CardGroupSize:
+          card_group_name:
             owner:
               RelativePlayer:
                 offset_from_current_player: 0
             name: lower_cards
-          card_group_name_dest:
+          operator: "=="
+          compare_to: 0
+      - CardGroupSize:
+          card_group_name:
             owner:
               RelativePlayer:
                 offset_from_current_player: 0
             name: hand_cards
-  ? LowerBounded:
-      min: 1
-  : - verb: MoveCards
-      conditions:
-        - card_group_size:
-            card_group_name:
-              owner:
-                RelativePlayer:
-                  offset_from_current_player: 0
-              name: hand_cards
-            operator: ">="
-            compare_to: 0
-      object:
-        CardMove:
-          card_group_name_source:
-            owner:
-              RelativePlayer:
-                offset_from_current_player: 0
-            name: hand_cards
-          card_group_name_dest:
-            owner:
-              Name: communal_cards
-            name: active_pile
-    - verb: MoveCards
-      conditions:
-        - card_group_size:
-            card_group_name:
-              owner:
-                RelativePlayer:
-                  offset_from_current_player: 0
-              name: lower_cards
-            operator: ">="
-            compare_to: 0
-        - card_group_size:
-            card_group_name:
-              owner:
-                RelativePlayer:
-                  offset_from_current_player: 0
-              name: hand_cards
-            operator: "=="
-            compare_to: 0
-      object:
-        CardMove:
-          card_group_name_source:
-            owner:
-              RelativePlayer:
-                offset_from_current_player: 0
-            name: lower_cards
-          card_group_name_dest:
+          operator: "=="
+          compare_to: 0
+    object:
+      CardMove:
+        card_group_name_source:
+          owner:
+            RelativePlayer:
+              offset_from_current_player: 0
+          name: blind_cards
+        card_group_name_dest:
+          owner:
+            Name: communal_cards
+          name: active_pile
+        conditions:
+          - CardsMustBeSameRank
+  - description: "Pick-up the active pile into your hand"
+    verb: MoveCards
+    conditions:
+      - MustBeInTurnRange:
+          min: 1
+    object:
+      CardMove:
+        card_group_name_source:
+          owner:
+            Name: communal_cards
+          name: active_pile
+        card_group_name_dest:
+          owner:
+            RelativePlayer:
+              offset_from_current_player: 0
+          name: hand_cards
+  - description: "Draw a card from the draw pile to endyour turn"
+    verb: MoveCards
+    conditions:
+      - MustBeInTurnRange:
+          min: 1
+      - CardGroupSize:
+          card_group_name:
             owner:
               Name: communal_cards
-            name: active_pile
-    - verb: MoveCards
-      conditions:
-        - card_group_size:
-            card_group_name:
-              owner:
-                RelativePlayer:
-                  offset_from_current_player: 0
-              name: lower_cards
-            operator: "=="
-            compare_to: 0
-        - card_group_size:
-            card_group_name:
-              owner:
-                RelativePlayer:
-                  offset_from_current_player: 0
-              name: hand_cards
-            operator: "=="
-            compare_to: 0
-      object:
-        CardMove:
-          card_group_name_source:
-            owner:
-              RelativePlayer:
-                offset_from_current_player: 0
-            name: blind_cards
-          card_group_name_dest:
-            owner:
-              Name: communal_cards
-            name: active_pile
-    - verb: MoveCards
-      object:
-        CardMove:
-          card_group_name_source:
-            owner:
-              Name: communal_cards
-            name: active_pile
-          card_group_name_dest:
-            owner:
-              RelativePlayer:
-                offset_from_current_player: 0
-            name: hand_cards
+            name: draw_pile
+          operator: ">"
+          compare_to: 0
+    object:
+      CardMove:
+        card_group_name_source:
+          owner:
+            Name: communal_cards
+          name: draw_pile
+        card_group_name_dest:
+          owner:
+            RelativePlayer:
+              offset_from_current_player: 0
+          name: hand_cards
 
 ending_conditions:
   - player_count: AllButOnePlayer

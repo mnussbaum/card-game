@@ -34,30 +34,8 @@ fn main() {
     println!("{:?}", game_state.players[0].hand);
     println!("{:?}", game_state.communal_cards);
 
-    // play_game(&game_rules, game_state)
+    game_state.play_game();
 }
-
-// fn play_game(game_rules: &GameRules, mut game_state: GameState) {
-//     loop {
-// Get actions player can take from rules
-// Get consequences from last played card
-// Apply consequences
-//
-// println!("Last played card: {:#?}", game_state.communal_cards.last());
-// let player = game_state.player_on_turn();
-// println!("Your cards: {:#?}", player.hand.cards);
-//
-// play_turn(&mut game_state);
-//
-// let player = game_state.player_on_turn();
-// if player.hand.cards.len() == 0 {
-//     println!("{} wins!", player.name);
-//     return;
-// }
-//
-// game_state.advance_player_turn();
-//     }
-// }
 
 // fn play_turn(game_state: &mut GameState) {
 //     if game_state.communal_cards.len() > 0 {
@@ -140,16 +118,6 @@ struct GameState {
     player_turn_index: usize,
     players: Vec<Player>,
 }
-
-// impl GameState {
-//     pub fn player_on_turn(&mut self) -> &mut Player {
-//         return &mut self.players[self.player_turn_index];
-//     }
-//
-//     pub fn advance_player_turn(&mut self) {
-//         self.player_turn_index = (self.player_turn_index + 1) % self.players.len();
-//     }
-// }
 
 impl GameState {
     fn new(game_rules: GameRules, mut players: Vec<Player>) -> Self {
@@ -259,6 +227,36 @@ impl GameState {
                     continue;
                 }
             }
+        }
+    }
+
+    pub fn player_on_turn(&mut self) -> &mut Player {
+        return &mut self.players[self.player_turn_index];
+    }
+
+    pub fn advance_player_turn(&mut self) {
+        self.player_turn_index = (self.player_turn_index + 1) % self.players.len();
+    }
+
+    fn play_game(&mut self) {
+        loop {
+            // Get actions player can take from rules
+            // Get consequences from last played card
+            // Apply consequences
+
+            println!("Communal cards: {:?}", self.communal_cards);
+            let player = self.player_on_turn();
+            println!("Your cards: {:?}", player.hand);
+
+            // play_turn(&mut game_state);
+
+            // let player = self.player_on_turn();
+            // if player.hand.cards.len() == 0 {
+            //     println!("{} wins!", player.name);
+            //     return;
+            // }
+
+            self.advance_player_turn();
         }
     }
 }

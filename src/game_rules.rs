@@ -14,16 +14,15 @@ use crate::card_deck::{CardGroup, CardRank, CardValue};
 // After user plays card re-eval consequences to handle if eg the player can play again
 // Played cards are going to need a record of who played them
 //
-// Actions are going to need consequences too
-// Some actions are required, others are optional
-// Consequences need conditions
-// Actions need names
+// Actions are going to need consequences too - maybe?
+// Some actions are required, others are optional - maybe at least one action always required?
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Verb {
+    ConstrainPlayableCards,
     MoveCards,
     MoveNextTurn,
-    ConstrainPlayableCards,
+    SwapCards,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -49,19 +48,37 @@ pub enum Object {
     CardMove {
         card_group_name_source: CardGroupId,
         card_group_name_dest: CardGroupId,
+
+        #[serde(default)]
+        conditions: Vec<Condition>,
+    },
+    CardSwap {
+        first_card_group_name: CardGroupId,
+        second_card_group_name: CardGroupId,
     },
     MinimumPlayableCard(RelativeCard),
-    CardsMustBeSameRank,
     RelativePlayer {
         offset_from_current_player: usize,
     },
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct Condition {}
+pub enum Condition {
+    CardGroupSize {
+        card_group_name: CardGroupId,
+        operator: String,
+        compare_to: usize,
+    },
+    CardsMustBeSameRank,
+    MustBeInTurnRange {
+        min: Option<usize>,
+        max: Option<usize>,
+    },
+}
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Play {
+    pub description: String,
     pub verb: Verb,
     pub object: Object,
 
@@ -101,6 +118,6 @@ pub struct GameRules {
     pub player_hand: HashMap<String, CardGroup>,
     pub communal_cards: HashMap<String, CardGroup>,
     pub cards: HashMap<CardRank, CardDescription>,
-    pub turn_actions: HashMap<TurnRange, Vec<Play>>,
+    pub turn_actions: Vec<Play>,
     pub ending_conditions: Vec<EndingCondition>,
 }
