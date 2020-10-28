@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
+
 use crate::card_deck::{CardGroup, CardRank, CardValue};
 
 // TODO: Start here
@@ -12,30 +14,31 @@ use crate::card_deck::{CardGroup, CardRank, CardValue};
 // After user plays card re-eval consequences to handle if eg the player can play again
 // Played cards are going to need a record of who played them
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Verb {
     MoveCards,
     MoveNextTurn,
     ConstrainPlayableCards,
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum RelativeCard {
     LastPlayedCard,
 }
 
-pub struct RelativePlayerIndex {
-    pub offset_from_current_player: usize,
-}
-
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum CardGroupOwner {
     Name(String),
-    RelativePlayer(RelativePlayerIndex),
+    RelativePlayer { offset_from_current_player: usize },
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct CardGroupId {
     pub owner: CardGroupOwner,
     pub name: String,
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Object {
     // This will need to prompt user for what card and how many
     CardMove {
@@ -44,35 +47,43 @@ pub enum Object {
     },
     MinimumPlayableCard(RelativeCard),
     CardsMustBeSameRank,
-    RelativePlayer(RelativePlayerIndex),
+    RelativePlayer {
+        offset_from_current_player: usize,
+    },
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Play {
     pub verb: Verb,
     pub object: Object,
 }
 
+#[derive(Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TurnRange {
-    Bounded(std::ops::Range<usize>),
-    LowerBounded(std::ops::RangeFrom<usize>),
+    Bounded { min: usize, max: usize },
+    LowerBounded { min: usize },
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct CardDescription {
     pub value: CardValue,
     pub consequences: Vec<Play>,
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum PlayerCount {
     AllPlayers,
     AllButOnePlayer,
     SomePlayers(usize),
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct EndingCondition {
     pub player_count: PlayerCount,
     pub card_count: usize,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GameRules {
     pub min_player_count: usize,
     pub max_player_count: usize,

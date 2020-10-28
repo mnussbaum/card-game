@@ -3,6 +3,8 @@ use rand::thread_rng;
 use std::char;
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug)]
 pub struct Deck {
     pub cards: Vec<Card>,
@@ -41,7 +43,7 @@ impl Default for Deck {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Suit {
     Club,
     Diamond,
@@ -60,12 +62,13 @@ impl Suit {
     }
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum CardValue {
     Wild,
     Numeric(usize),
 }
 
-#[derive(Debug, PartialOrd, PartialEq)]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CardRank {
     Two,
     Three,
@@ -121,6 +124,7 @@ impl CardRank {
     }
 }
 
+#[derive(PartialEq, Serialize, Deserialize)]
 pub struct Card {
     pub suit: Suit,
     pub rank: CardRank,
@@ -153,7 +157,7 @@ impl fmt::Display for Card {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum CardGroupVisibility {
     FaceDown,
     FaceUp,
@@ -161,9 +165,11 @@ pub enum CardGroupVisibility {
     VisibleToOwner,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct CardGroup {
+    #[serde(default)]
     pub cards: Vec<Card>,
+
     pub max_card_limit: Option<usize>,
     pub visibility: CardGroupVisibility,
 }

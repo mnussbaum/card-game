@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs;
 
 use text_io::read;
 
@@ -12,6 +13,10 @@ mod game_rules;
 use game_rules::GameRules;
 
 fn main() {
+    let yams =
+        fs::read_to_string("poo_head_rules.yaml").expect("Something went wrong reading the file");
+    let game_rules: GameRules = serde_yaml::from_str(&yams).unwrap();
+    println!("{:#?}", game_rules);
     let players: Vec<Player> = vec![
         Player {
             name: "Alice".into(),
