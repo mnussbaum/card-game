@@ -221,6 +221,6 @@ impl fmt::Display for CardGroup {
             }
         };
 
-        write!(f, "{}", string_repr,)
+        write!(f, "{}", string_repr)
     }
 }

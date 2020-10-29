@@ -1,21 +1,10 @@
 use std::collections::HashMap;
+use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
 use crate::card_deck::{CardGroup, CardRank, CardValue};
-
-// TODO: Start here
-// x. Serialize game rule yaml to objects
-// 2. Use rules to drive play
-//
-// First gather the actions available to a player from the defaults
-// Then look at the consequences applying to the player, and use
-// that to winnow out actions
-// After user plays card re-eval consequences to handle if eg the player can play again
-// Played cards are going to need a record of who played them
-//
-// Actions are going to need consequences too - maybe?
-// Some actions are required, others are optional - maybe at least one action always required?
+use crate::game_state::GameState;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Verb {
@@ -32,6 +21,7 @@ pub enum RelativeCard {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum CardGroupOwner {
+    // TODO: Allow player lookup by name. Right now it's just "communal_cards" that's allowed
     Name(String),
     RelativePlayer { offset_from_current_player: usize },
 }
@@ -42,8 +32,72 @@ pub struct CardGroupId {
     pub name: String,
 }
 
+const COMMUNAL_CARDS: &str = "communal_cards";
+
+impl CardGroupId {
+    // TODO: Add an error type
+    fn card_group<'a>(&self, game_state: &'a GameState) -> Result<&'a CardGroup, String> {
+        match &self.owner {
+            CardGroupOwner::Name(owner_name) => {
+                if owner_name == COMMUNAL_CARDS {
+                    if let Some(card_group) = game_state.communal_cards.get(&self.name) {
+                        Ok(card_group)
+                    } else {
+                        Err(format!(
+                            "Communal card group name doesn't match anything. Given: {}. Available: {}",
+                            self.name,
+                            game_state
+                                .communal_cards
+                                .keys()
+                                .map(|k| k.to_string())
+                                .collect::<Vec<String>>()
+                                .join(", "),
+                        )
+                        .into())
+                    }
+                } else {
+                    Err(format!(
+                        "Invalid card group owner name. Right now only 'communal_cards' is supported. Given: {}",
+                        owner_name,
+                    ).into())
+                }
+            }
+
+            CardGroupOwner::RelativePlayer {
+                offset_from_current_player,
+            } => {
+                if let Some(player) =
+                    game_state.offset_from_current_player(*offset_from_current_player)
+                {
+                    if let Some(card_group) = player.hand.get(&self.name) {
+                        Ok(card_group)
+                    } else {
+                        Err(format!(
+                            "Player hand card group name doesn't match anything. Given: {}. Available: {}",
+                            self.name,
+                            player
+                                .hand
+                                .keys()
+                                .map(|k| k.to_string())
+                                .collect::<Vec<String>>()
+                                .join(", "),
+                        )
+                        .into())
+                    }
+                } else {
+                    panic!(format!(
+                        "Invalid player index. Given: {}. Player count: {}",
+                        offset_from_current_player,
+                        game_state.players.len(),
+                    ));
+                }
+            }
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub enum Object {
+enum Object {
     // This will need to prompt user for what card and how many
     CardMove {
         card_group_name_source: CardGroupId,
@@ -63,10 +117,31 @@ pub enum Object {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub enum Condition {
+enum Operator {
+    Equal,
+    GreaterThan,
+    GreaterThanOrEqual,
+    LessThan,
+    LessThanOrEqual,
+}
+
+impl Operator {
+    pub fn compare(&self, lhs: usize, rhs: usize) -> bool {
+        match self {
+            Operator::Equal => lhs == rhs,
+            Operator::GreaterThan => lhs > rhs,
+            Operator::GreaterThanOrEqual => lhs >= rhs,
+            Operator::LessThan => lhs < rhs,
+            Operator::LessThanOrEqual => lhs <= rhs,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+enum Condition {
     CardGroupSize {
         card_group_name: CardGroupId,
-        operator: String,
+        operator: Operator,
         compare_to: usize,
     },
     CardsMustBeSameRank,
@@ -76,14 +151,70 @@ pub enum Condition {
     },
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+impl Condition {
+    fn met(&self, game_state: &GameState) -> Result<bool, String> {
+        match self {
+            Condition::CardGroupSize {
+                card_group_name,
+                operator,
+                compare_to,
+            } => {
+                let card_group = card_group_name.card_group(game_state)?;
+                Ok(operator.compare(card_group.cards.len(), *compare_to))
+            }
+            // TODO: This feels like it shouldn't be the same type of condition
+            Condition::CardsMustBeSameRank => Ok(true),
+            Condition::MustBeInTurnRange { min, max } => {
+                if let Some(min) = min {
+                    if game_state.turn_count < *min {
+                        return Ok(false);
+                    }
+                }
+                if let Some(max) = max {
+                    if game_state.turn_count > *max {
+                        return Ok(false);
+                    }
+                }
+
+                Ok(true)
+            }
+        }
+    }
+}
+
+#[derive(PartialEq, Serialize, Deserialize)]
 pub struct Play {
     pub description: String,
-    pub verb: Verb,
-    pub object: Object,
+    verb: Verb,
+    object: Object,
 
     #[serde(default)]
-    pub conditions: Vec<Condition>,
+    conditions: Vec<Condition>,
+}
+
+impl fmt::Debug for Play {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl fmt::Display for Play {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.description)
+    }
+}
+
+impl Play {
+    // TODO: Error handling
+    pub fn all_conditions_met(&self, game_state: &GameState) -> Result<bool, String> {
+        for condition in self.conditions.iter() {
+            if !condition.met(game_state)? {
+                return Ok(false);
+            }
+        }
+
+        return Ok(true);
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]

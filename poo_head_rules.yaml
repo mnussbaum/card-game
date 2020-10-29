@@ -234,7 +234,7 @@ turn_actions:
               RelativePlayer:
                 offset_from_current_player: 0
             name: hand_cards
-          operator: ">="
+          operator: GreaterThanOrEqual
           compare_to: 0
     object:
       CardMove:
@@ -260,7 +260,7 @@ turn_actions:
               RelativePlayer:
                 offset_from_current_player: 0
             name: lower_cards
-          operator: ">="
+          operator: GreaterThanOrEqual
           compare_to: 0
       - CardGroupSize:
           card_group_name:
@@ -268,7 +268,7 @@ turn_actions:
               RelativePlayer:
                 offset_from_current_player: 0
             name: hand_cards
-          operator: "=="
+          operator: Equal
           compare_to: 0
     object:
       CardMove:
@@ -294,7 +294,7 @@ turn_actions:
               RelativePlayer:
                 offset_from_current_player: 0
             name: lower_cards
-          operator: "=="
+          operator: Equal
           compare_to: 0
       - CardGroupSize:
           card_group_name:
@@ -302,7 +302,7 @@ turn_actions:
               RelativePlayer:
                 offset_from_current_player: 0
             name: hand_cards
-          operator: "=="
+          operator: Equal
           compare_to: 0
     object:
       CardMove:
@@ -343,7 +343,7 @@ turn_actions:
             owner:
               Name: communal_cards
             name: draw_pile
-          operator: ">"
+          operator: GreaterThan
           compare_to: 0
     object:
       CardMove:
