@@ -6,4 +6,4 @@
 * Consequences will eventually need a priority to resolve conflicts
 * Actions are going to need consequences too - maybe?
 * Some actions are required, others are optional - maybe at least one action always required?
-* Not sure about the grammar for plays yet. Also plays need a better name
+* Not sure about the grammar for actions yet

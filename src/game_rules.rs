@@ -183,7 +183,7 @@ impl Condition {
 }
 
 #[derive(PartialEq, Serialize, Deserialize)]
-pub struct Play {
+pub struct Action {
     pub description: String,
     verb: Verb,
     object: Object,
@@ -192,20 +192,19 @@ pub struct Play {
     conditions: Vec<Condition>,
 }
 
-impl fmt::Debug for Play {
+impl fmt::Debug for Action {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
-impl fmt::Display for Play {
+impl fmt::Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.description)
     }
 }
 
-impl Play {
-    // TODO: Error handling
+impl Action {
     pub fn all_conditions_met(&self, game_state: &GameState) -> Result<bool, String> {
         for condition in self.conditions.iter() {
             if !condition.met(game_state)? {
@@ -226,7 +225,7 @@ pub enum TurnRange {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct CardDescription {
     pub value: CardValue,
-    pub consequences: Vec<Play>,
+    pub consequences: Vec<Action>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -249,6 +248,6 @@ pub struct GameRules {
     pub player_hand: HashMap<String, CardGroup>,
     pub communal_cards: HashMap<String, CardGroup>,
     pub cards: HashMap<CardRank, CardDescription>,
-    pub turn_actions: Vec<Play>,
+    pub turn_actions: Vec<Action>,
     pub ending_conditions: Vec<EndingCondition>,
 }

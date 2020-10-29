@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
-use text_io::read;
-
-use crate::card_deck::{Card, CardGroup, Deck};
-use crate::game_rules::{GameRules, Play};
+use crate::card_deck::{CardGroup, Deck};
+use crate::game_rules::{Action, GameRules};
 use crate::player::Player;
+use crate::user_input;
 
 #[derive(Debug)]
 pub struct GameState {
@@ -141,17 +140,15 @@ impl GameState {
     }
 
     pub fn play_game(&mut self) -> Result<(), String> {
-        println!("{:?}", self.players[0].hand);
-        println!("{:?}", self.communal_cards);
-
         loop {
+            println!("");
             println!("Communal cards: {:?}", self.communal_cards);
             let player = self.player_on_turn();
             println!("Your cards: {:?}", player.hand);
 
             let available_actions = self.game_rules.turn_actions.iter().try_fold(
                 Vec::new(),
-                |mut available_actions, action| -> Result<Vec<&Play>, String> {
+                |mut available_actions, action| -> Result<Vec<&Action>, String> {
                     if action.all_conditions_met(self)? {
                         available_actions.push(action);
                     }
@@ -160,19 +157,11 @@ impl GameState {
                 },
             )?;
 
-            println!(
-                "Available actions: {}",
-                available_actions
-                    .iter()
-                    .map(|a| a.to_string())
-                    .collect::<Vec<String>>()
-                    .join(", "),
-            );
-            let hmm: usize = read!();
+            let selected_action = user_input::select_action(available_actions);
 
             // TODO: START HERE:
-            // Now I need a way for players to select their actions and select cards for their
-            // actions
+            // Now I need a way for players to select cards for their actions
+            // And then implement the action verbs
             //
             // How do I know what cards to eval for consequences?
             // What was "just played"

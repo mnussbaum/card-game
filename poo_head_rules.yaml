@@ -333,7 +333,7 @@ turn_actions:
             RelativePlayer:
               offset_from_current_player: 0
           name: hand_cards
-  - description: "Draw a card from the draw pile to endyour turn"
+  - description: "Draw a card from the draw pile to end your turn"
     verb: MoveCards
     conditions:
       - MustBeInTurnRange:

@@ -12,6 +12,8 @@ use game_rules::GameRules;
 mod game_state;
 use game_state::GameState;
 
+mod user_input;
+
 fn main() {
     let yams =
         fs::read_to_string("poo_head_rules.yaml").expect("Something went wrong reading the file");
@@ -32,6 +34,7 @@ fn main() {
     let mut game_state = GameState::new(game_rules, players);
     game_state.deal();
 
+    // TODO: Handle user errors
     game_state.play_game();
 }
 
