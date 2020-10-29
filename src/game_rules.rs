@@ -7,16 +7,41 @@ use crate::card_deck::{CardGroup, CardRank, CardValue};
 use crate::game_state::GameState;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum Verb {
-    ConstrainPlayableCards,
-    MoveCards,
-    MoveNextTurn,
-    SwapCards,
+pub enum RelativeCard {
+    LastPlayedCard,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum RelativeCard {
-    LastPlayedCard,
+pub enum PlayableCardConstraint {
+    MinimumPlayableCard(RelativeCard),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CardMove {
+    card_group_name_source: CardGroupId,
+    card_group_name_dest: CardGroupId,
+
+    #[serde(default)]
+    conditions: Vec<Condition>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CardSwap {
+    first_card_group_name: CardGroupId,
+    second_card_group_name: CardGroupId,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TurnMove {
+    offset_from_current_player: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum Verb {
+    ConstrainPlayableCards(PlayableCardConstraint),
+    MoveCards(CardMove),
+    MoveNextTurn(TurnMove),
+    SwapCards(CardSwap),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -97,26 +122,6 @@ impl CardGroupId {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-enum Object {
-    // This will need to prompt user for what card and how many
-    CardMove {
-        card_group_name_source: CardGroupId,
-        card_group_name_dest: CardGroupId,
-
-        #[serde(default)]
-        conditions: Vec<Condition>,
-    },
-    CardSwap {
-        first_card_group_name: CardGroupId,
-        second_card_group_name: CardGroupId,
-    },
-    MinimumPlayableCard(RelativeCard),
-    RelativePlayer {
-        offset_from_current_player: usize,
-    },
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 enum Operator {
     Equal,
     GreaterThan,
@@ -186,7 +191,6 @@ impl Condition {
 pub struct Action {
     pub description: String,
     verb: Verb,
-    object: Object,
 
     #[serde(default)]
     conditions: Vec<Condition>,
