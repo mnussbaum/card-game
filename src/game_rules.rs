@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::card_deck::{CardGroup, CardRank, CardValue};
 use crate::game_state::GameState;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Verb {
     ConstrainPlayableCards,
     MoveCards,
@@ -14,19 +14,19 @@ pub enum Verb {
     SwapCards,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum RelativeCard {
     LastPlayedCard,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum CardGroupOwner {
     // TODO: Allow player lookup by name. Right now it's just "communal_cards" that's allowed
     Name(String),
     RelativePlayer { offset_from_current_player: usize },
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CardGroupId {
     pub owner: CardGroupOwner,
     pub name: String,
@@ -96,7 +96,7 @@ impl CardGroupId {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 enum Object {
     // This will need to prompt user for what card and how many
     CardMove {
@@ -116,7 +116,7 @@ enum Object {
     },
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 enum Operator {
     Equal,
     GreaterThan,
@@ -137,7 +137,7 @@ impl Operator {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 enum Condition {
     CardGroupSize {
         card_group_name: CardGroupId,
@@ -182,7 +182,7 @@ impl Condition {
     }
 }
 
-#[derive(PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Action {
     pub description: String,
     verb: Verb,
@@ -205,7 +205,7 @@ impl fmt::Display for Action {
 }
 
 impl Action {
-    pub fn all_conditions_met(&self, game_state: &GameState) -> Result<bool, String> {
+    fn all_conditions_met(&self, game_state: &GameState) -> Result<bool, String> {
         for condition in self.conditions.iter() {
             if !condition.met(game_state)? {
                 return Ok(false);
@@ -214,34 +214,38 @@ impl Action {
 
         return Ok(true);
     }
+
+    pub fn execute(&self, game_state: &mut GameState) -> Result<(), String> {
+        Ok(())
+    }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TurnRange {
     Bounded { min: usize, max: usize },
     LowerBounded { min: usize },
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CardDescription {
     pub value: CardValue,
     pub consequences: Vec<Action>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum PlayerCount {
     AllPlayers,
     AllButOnePlayer,
     SomePlayers(usize),
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EndingCondition {
     pub player_count: PlayerCount,
     pub card_count: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GameRules {
     pub min_player_count: usize,
     pub max_player_count: usize,
@@ -250,4 +254,19 @@ pub struct GameRules {
     pub cards: HashMap<CardRank, CardDescription>,
     pub turn_actions: Vec<Action>,
     pub ending_conditions: Vec<EndingCondition>,
+}
+
+impl GameRules {
+    pub fn available_actions(&self, game_state: &GameState) -> Result<Vec<&Action>, String> {
+        self.turn_actions.iter().try_fold(
+            Vec::new(),
+            |mut available_actions, action| -> Result<Vec<&Action>, String> {
+                if action.all_conditions_met(game_state)? {
+                    available_actions.push(action);
+                }
+
+                Ok(available_actions)
+            },
+        )
+    }
 }

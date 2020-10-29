@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::card_deck::{CardGroup, Deck};
-use crate::game_rules::{Action, GameRules};
+use crate::game_rules::GameRules;
 use crate::player::Player;
 use crate::user_input;
 
@@ -146,18 +146,13 @@ impl GameState {
             let player = self.player_on_turn();
             println!("Your cards: {:?}", player.hand);
 
-            let available_actions = self.game_rules.turn_actions.iter().try_fold(
-                Vec::new(),
-                |mut available_actions, action| -> Result<Vec<&Action>, String> {
-                    if action.all_conditions_met(self)? {
-                        available_actions.push(action);
-                    }
-
-                    Ok(available_actions)
-                },
-            )?;
-
-            let selected_action = user_input::select_action(available_actions);
+            // This clone satisfies the borrowck and allows me to mutably pass self to
+            // Action.excute
+            let game_rules_clone = self.game_rules.clone();
+            let available_actions = game_rules_clone.available_actions(self)?;
+            if let Some(selected_action) = user_input::select_action(available_actions) {
+                selected_action.execute(self)?;
+            }
 
             // TODO: START HERE:
             // Now I need a way for players to select cards for their actions

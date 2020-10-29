@@ -62,7 +62,7 @@ impl Suit {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum CardValue {
     Wild,
     Numeric(usize),
