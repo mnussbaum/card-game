@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::card_deck::{CardGroup, Deck};
-use crate::game_rules::GameRules;
+use crate::game_rules::{Action, GameRules};
 use crate::player::Player;
 use crate::user_input;
 
@@ -155,8 +155,13 @@ impl GameState {
             }
 
             // TODO: START HERE:
-            // Now I need a way for players to select cards for their actions
-            // And then implement the action verbs
+            //
+            // Started implementing action verbs
+            // Realized I need a way to require the pick-up-from-draw-pile action if
+            // a user has less than three cards remaining in hand.
+            // This means I need to let users do multiple actions in a turn, and I
+            // need to re-eval available actions after each action is played. But then I need to
+            // have a constraint that some actions can only happen once per turn
             //
             // How do I know what cards to eval for consequences?
             // What was "just played"
