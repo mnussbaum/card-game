@@ -148,13 +148,13 @@ impl GameState {
 
             // This clone satisfies the borrowck and allows me to mutably pass self to
             // Action.excute
-            let game_rules_clone = self.game_rules.clone();
-            let available_actions = game_rules_clone.available_actions(self)?;
+            let game_rules = self.game_rules.clone();
+            let available_actions = game_rules.available_actions(self)?;
             if let Some(selected_action) = user_input::select_action(available_actions) {
                 selected_action.execute(self)?;
             }
 
-            // TODO: START HERE:
+            // TODO:
             //
             // Started implementing action verbs
             // Realized I need a way to require the pick-up-from-draw-pile action if

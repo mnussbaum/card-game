@@ -187,6 +187,16 @@ enum Condition {
         operator: Operator,
         compare_to: usize,
     },
+
+    TurnCount {
+        operator: Operator,
+        compare_to: usize,
+    },
+    CardCount {
+        operator: Operator,
+        compare_to: usize,
+        for_players: PlayerCount,
+    },
 }
 
 impl Condition {
@@ -200,6 +210,48 @@ impl Condition {
             } => {
                 let card_group = card_group_name.card_group(game_state)?;
                 Ok(operator.compare(card_group.cards.len(), *compare_to))
+            }
+
+            Condition::TurnCount {
+                operator,
+                compare_to,
+            } => Ok(operator.compare(game_state.turn_count, *compare_to)),
+
+            Condition::CardCount {
+                operator,
+                compare_to,
+                for_players,
+            } => {
+                let players_with_card_count =
+                    game_state
+                        .players
+                        .iter()
+                        .fold(0, |players_with_card_count, player| {
+                            if operator.compare(
+                                player
+                                    .hand
+                                    .values()
+                                    .map(|hand_card_group| hand_card_group.cards.len())
+                                    .sum(),
+                                *compare_to,
+                            ) {
+                                players_with_card_count + 1
+                            } else {
+                                players_with_card_count
+                            }
+                        });
+
+                match for_players {
+                    PlayerCount::AllPlayers => {
+                        Ok(players_with_card_count == game_state.players.len())
+                    }
+                    PlayerCount::AllButOnePlayer => {
+                        Ok((game_state.players.len() - players_with_card_count) == 1)
+                    }
+                    PlayerCount::SomePlayers { player_count } => {
+                        Ok(players_with_card_count == *player_count)
+                    }
+                }
             }
         }
     }
@@ -275,18 +327,7 @@ pub struct CardDescription {
 pub enum PlayerCount {
     AllPlayers,
     AllButOnePlayer,
-    SomePlayers(usize),
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum EndingCondition {
-    TurnCount {
-        count: usize,
-    },
-    CardCount {
-        count: usize,
-        for_players: PlayerCount,
-    },
+    SomePlayers { player_count: usize },
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -296,9 +337,9 @@ pub struct TurnPhase {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct TurnDescription {
+pub struct TurnType {
     pub name: String,
-    until: Vec<EndingCondition>,
+    conditions: Vec<Condition>,
     turn_phases: Vec<TurnPhase>,
 }
 
@@ -309,11 +350,15 @@ pub struct GameRules {
     pub player_hand: HashMap<String, CardGroup>,
     pub communal_cards: HashMap<String, CardGroup>,
     pub cards: HashMap<CardRank, CardDescription>,
-    pub game_flow: Vec<TurnDescription>,
+    pub game_flow: Vec<TurnType>,
 }
 
 impl GameRules {
     pub fn available_actions(&self, game_state: &GameState) -> Result<Vec<&Action>, String> {
+        // TODO: START HERE:
+        //  Need to implement game flow into actions
+        //  Then implement actions and conditions
+        //
         // self.turn_actions.iter().try_fold(
         //     Vec::new(),
         //     |mut available_actions, action| -> Result<Vec<&Action>, String> {
@@ -324,6 +369,24 @@ impl GameRules {
         //         Ok(available_actions)
         //     },
         // )
-        Ok(Vec::new())
+
+        self.game_flow.iter().try_fold(
+            Vec::new(),
+            |mut available_actions, turn_type| -> Result<Vec<&Action>, String> {
+                for condition in turn_type.conditions.iter() {
+                    if condition.met(game_state)? {
+                        for turn_phase in turn_type.turn_phases.iter() {
+                            for action in turn_phase.actions.iter() {
+                                if action.available(game_state)? {
+                                    available_actions.push(action);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return Ok(available_actions);
+            },
+        )
     }
 }

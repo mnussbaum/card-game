@@ -62,10 +62,11 @@ cards:
       Numeric: 10
 
 game_flow:
-  - name: "Setup turn"
-    until:
+  - name: "Initial setup"
+    conditions:
       - TurnCount:
-          count: 1
+          operator: Equal
+          compare_to: 0
     turn_phases:
       - name: "Swap cards"
         actions:
@@ -86,9 +87,10 @@ game_flow:
               - description: "Next player's turn to swap cards"
                 verb: EndPhase
   - name: "Game turn"
-    until:
+    conditions:
       - CardCount:
-          count: 0
+          operator: Equal
+          compare_to: 0
           for_players: AllButOnePlayer
     turn_phases:
       - name: "Play cards or pick-up the pile"
