@@ -116,7 +116,7 @@ pub struct CardMove {
 
 impl CardMove {
     fn execute(&self, game_state: &mut GameState) -> Result<(), String> {
-        // START HERE: TODO: Prompt user to figure out what cards they want to move
+        // TODO: Prompt user to figure out what cards they want to move
         // See if their selection meets the card conditions
         // See if their selection is OK by the active consequences
         // If so, move them
@@ -128,6 +128,16 @@ impl CardMove {
 pub struct CardSwap {
     first_card_group_name: CardGroupId,
     second_card_group_name: CardGroupId,
+}
+
+impl CardSwap {
+    fn execute(&self, game_state: &mut GameState) -> Result<(), String> {
+        // println!("Cards to move into hand from lower cards (0-:");
+        // let selected_action_index: usize = read!();
+        // TODO: START HERE: prompt user to figure out what cards to swap, move it into user_input
+        // module
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -303,7 +313,7 @@ impl Action {
                 Ok(())
             }
             Verb::SwapCards(card_swap) => {
-                // card_swap.execute(game_state)?;
+                card_swap.execute(game_state)?;
 
                 Ok(())
             }
@@ -358,17 +368,6 @@ impl GameRules {
         // TODO: START HERE:
         //  Need to implement game flow into actions
         //  Then implement actions and conditions
-        //
-        // self.turn_actions.iter().try_fold(
-        //     Vec::new(),
-        //     |mut available_actions, action| -> Result<Vec<&Action>, String> {
-        //         if action.available(game_state)? {
-        //             available_actions.push(action);
-        //         }
-        //
-        //         Ok(available_actions)
-        //     },
-        // )
 
         self.game_flow.iter().try_fold(
             Vec::new(),
