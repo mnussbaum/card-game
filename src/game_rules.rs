@@ -243,73 +243,69 @@ pub struct CardSwap {
     second_card_group: CardGroupId,
 }
 
+// Swaps cards between two card groups
 impl CardSwap {
     fn execute(&self, game_state: &mut GameState) -> Result<(), String> {
-        // TODO: Validate indices
-        // TODO: Ensure swapping is balanced
+        // TODO: User input errors should trigger input retries
 
-        let mut cards_to_move_from_first_to_second: Vec<Card> = Vec::new();
-        let mut cards_to_move_from_second_to_first: Vec<Card> = Vec::new();
-        let hmm = &self.first_card_group.card_group(game_state)?.cards;
-        let ffs = hmm.len();
-        loop {
-            println!(
-                "Select card to move from {} into {}. Use 0-{} or -1 to finish:",
-                self.first_card_group,
-                self.second_card_group,
-                ffs - 1,
-            );
-            let selected_card_index: isize = read!();
-            if selected_card_index == -1 {
-                break;
+        let card_groups = vec![&self.first_card_group, &self.second_card_group];
+
+        // This function reflects the length of card_groups above
+        let other_card_group_id =
+            |card_group_index: usize| -> &CardGroupId { card_groups[(card_group_index + 1) % 2] };
+
+        let mut cards_to_move_by_card_group: Vec<Vec<Card>> = vec![vec![], vec![]];
+
+        for (card_group_index, card_group_id) in card_groups.iter().enumerate() {
+            loop {
+                println!(
+                    "Select card to move from {} into {}. Use 0-{} or -1 to finish:",
+                    card_group_id,
+                    other_card_group_id(card_group_index),
+                    &card_group_id.card_group(game_state)?.cards.len() - 1,
+                );
+
+                let selected_card_index: isize = read!();
+                if selected_card_index < 0 {
+                    break;
+                }
+
+                if selected_card_index as usize >= card_group_id.card_group(game_state)?.cards.len()
+                {
+                    return Err(format!("Invalid card index: {}", selected_card_index));
+                }
+
+                cards_to_move_by_card_group[card_group_index].push(
+                    card_group_id
+                        .card_group(game_state)?
+                        .cards
+                        .get(selected_card_index as usize)
+                        .unwrap()
+                        .clone(),
+                );
             }
-
-            cards_to_move_from_first_to_second
-                .push(hmm.get(selected_card_index as usize).unwrap().clone());
         }
 
-        let hmm = &self.second_card_group.card_group(game_state)?.cards;
-        let ffs = hmm.len();
-        loop {
-            println!(
-                "Select card to move from {} into {}. Use 0-{} or -1 to finish:",
-                self.second_card_group,
-                self.first_card_group,
-                ffs - 1,
-            );
-            let selected_card_index: isize = read!();
-            if selected_card_index == -1 {
-                break;
+        if cards_to_move_by_card_group[0].len() != cards_to_move_by_card_group[1].len() {
+            return Err("Card swaps must move the same number of cards in both directions".into());
+        }
+
+        for (card_group_index, (card_group_id, cards_to_move_out_of_card_group)) in card_groups
+            .iter()
+            .zip(cards_to_move_by_card_group.into_iter())
+            .enumerate()
+        {
+            let card_group_cards = &mut card_group_id.card_group_mut(game_state)?.cards;
+            for card_ref in cards_to_move_out_of_card_group.iter() {
+                let index = card_group_cards.iter().position(|x| x == card_ref).unwrap();
+                card_group_cards.remove(index);
             }
-
-            cards_to_move_from_second_to_first
-                .push(hmm.get(selected_card_index as usize).unwrap().clone());
-        }
-
-        let first_card_group_cards = &mut self.first_card_group.card_group_mut(game_state)?.cards;
-        for card_ref in &cards_to_move_from_first_to_second {
-            let index = first_card_group_cards
-                .iter()
-                .position(|x| x == card_ref)
-                .unwrap();
-            first_card_group_cards.remove(index);
-        }
-        for card in cards_to_move_from_first_to_second.into_iter() {
-            let second_card_group = self.second_card_group.card_group_mut(game_state)?;
-            second_card_group.cards.push(card);
-        }
-
-        let second_card_group_cards = &mut self.second_card_group.card_group_mut(game_state)?.cards;
-        for card_ref in &cards_to_move_from_second_to_first {
-            let index = second_card_group_cards
-                .iter()
-                .position(|x| x == card_ref)
-                .unwrap();
-            second_card_group_cards.remove(index);
-        }
-        for card in cards_to_move_from_second_to_first.into_iter() {
-            let first_card_group = self.first_card_group.card_group_mut(game_state)?;
-            first_card_group.cards.push(card);
+            for card in cards_to_move_out_of_card_group.into_iter() {
+                other_card_group_id(card_group_index)
+                    .card_group_mut(game_state)?
+                    .cards
+                    .push(card);
+            }
         }
 
         Ok(())
