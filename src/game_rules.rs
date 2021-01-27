@@ -149,16 +149,57 @@ impl CardMove {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CardSwap {
-    first_card_group_name: CardGroupId,
-    second_card_group_name: CardGroupId,
+    first_card_group: CardGroupId,
+    second_card_group: CardGroupId,
 }
 
 impl CardSwap {
     fn execute(&self, game_state: &mut GameState) -> Result<(), String> {
-        // println!("Cards to move into hand from lower cards (0-:");
-        // let selected_action_index: usize = read!();
         // TODO: START HERE: prompt user to figure out what cards to swap, move it into user_input
         // module
+
+        let mut card_to_move_from_first_to_second: Vec<isize> = Vec::new();
+        let mut card_to_move_from_second_to_first: Vec<isize> = Vec::new();
+        loop {
+            println!(
+                "Select card to move from {} into {}. Use 0-{} or -1 to finish:",
+                self.first_card_group,
+                self.second_card_group,
+                self.first_card_group.card_group(game_state)?.cards.len(),
+            );
+            // TODO: Validate index is valid
+            let selected_card_index: isize = read!();
+            if selected_card_index == -1 {
+                break;
+            }
+
+            card_to_move_from_first_to_second.push(selected_card_index);
+        }
+
+        loop {
+            println!(
+                "Select card to move from {} into {}. Use 0-{} or -1 to finish:",
+                self.second_card_group,
+                self.first_card_group,
+                self.second_card_group.card_group(game_state)?.cards.len(),
+            );
+            // TODO: Validate index is valid
+            let selected_card_index: isize = read!();
+            if selected_card_index == -1 {
+                break;
+            }
+
+            card_to_move_from_second_to_first.push(selected_card_index);
+        }
+
+        for card_index in card_to_move_from_first_to_second {
+            let mut cards = self.first_card_group.card_group(game_state)?.cards;
+
+            let card = cards.remove(card_index as usize);
+
+            // pop one off and move it to the other, then do  the same to the other group
+        }
+
         Ok(())
     }
 }
