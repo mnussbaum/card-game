@@ -4,7 +4,7 @@ use text_io::read;
 
 use serde::{Deserialize, Serialize};
 
-use crate::card_deck::{CardGroup, CardRank, CardValue};
+use crate::card_deck::{Card, CardGroup, CardRank, CardValue};
 use crate::game_state::GameState;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -45,13 +45,17 @@ impl fmt::Display for CardGroupId {
 
 const COMMUNAL_CARDS: &str = "communal_cards";
 
+// TODO: Dedup _mut and not mut methods
+
 impl CardGroupId {
-    // TODO: Add an error type
-    fn card_group<'a>(&self, game_state: &'a GameState) -> Result<&'a CardGroup, String> {
-        let hmm = match &self.owner {
+    fn owners_card_groups<'a>(
+        &self,
+        game_state: &'a GameState,
+    ) -> Result<&'a HashMap<String, CardGroup>, String> {
+        match &self.owner {
             CardGroupOwner::Name(owner_name) => {
                 if owner_name == COMMUNAL_CARDS {
-                    &game_state.communal_cards
+                    Ok(&game_state.communal_cards)
                 } else {
                     return Err(format!(
                         "Invalid card group owner name. Right now only 'communal_cards' is supported. Given: {}",
@@ -63,39 +67,125 @@ impl CardGroupId {
             CardGroupOwner::RelativePlayer {
                 offset_from_current_player,
             } => {
+                let player_count = game_state.players.len();
                 if let Some(player) =
                     game_state.offset_from_current_player(*offset_from_current_player)
                 {
-                    &player.hand
+                    Ok(&player.hand)
                 } else {
                     return Err(format!(
                         "Invalid player index. Given: {}. Player count: {}",
-                        offset_from_current_player,
-                        game_state.players.len(),
+                        offset_from_current_player, player_count,
                     ));
                 }
             }
-        };
+        }
+    }
+
+    fn owners_card_groups_mut<'a>(
+        &self,
+        game_state: &'a mut GameState,
+    ) -> Result<&'a mut HashMap<String, CardGroup>, String> {
+        match &self.owner {
+            CardGroupOwner::Name(owner_name) => {
+                if owner_name == COMMUNAL_CARDS {
+                    Ok(&mut game_state.communal_cards)
+                } else {
+                    return Err(format!(
+                        "Invalid card group owner name. Right now only 'communal_cards' is supported. Given: {}",
+                        owner_name,
+                    ).into());
+                }
+            }
+
+            CardGroupOwner::RelativePlayer {
+                offset_from_current_player,
+            } => {
+                let player_count = game_state.players.len();
+                if let Some(player) =
+                    game_state.offset_from_current_player_mut(*offset_from_current_player)
+                {
+                    Ok(&mut player.hand)
+                } else {
+                    return Err(format!(
+                        "Invalid player index. Given: {}. Player count: {}",
+                        offset_from_current_player, player_count,
+                    ));
+                }
+            }
+        }
+    }
+
+    // TODO: Add an error type
+    fn card_group<'a>(&self, game_state: &'a GameState) -> Result<&'a CardGroup, String> {
+        let owners_card_groups = self.owners_card_groups(game_state)?;
+        let owners_card_groups_names = owners_card_groups
+            .keys()
+            .map(|k| k.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
 
         if let Some(name) = &self.name {
-            if let Some(card_group) = hmm.get(name) {
-                return Ok(&card_group);
+            if owners_card_groups.contains_key(name) {
+                return Ok(owners_card_groups.get(name).unwrap());
             } else {
                 return Err(format!(
                     "Player hand card group name doesn't match anything. Given: {}. Available: {}",
-                    name,
-                    hmm.keys()
-                        .map(|k| k.to_string())
-                        .collect::<Vec<String>>()
-                        .join(", "),
+                    name, owners_card_groups_names,
                 )
                 .into());
             }
         } else if let Some(first_with_cards_of) = &self.first_with_cards_of {
             for card_group_name in first_with_cards_of {
-                if let Some(card_group) = hmm.get(card_group_name) {
-                    if card_group.cards.len() > 0 {
-                        return Ok(&card_group);
+                if owners_card_groups.contains_key(card_group_name) {
+                    if owners_card_groups.get(card_group_name).unwrap().cards.len() > 0 {
+                        return Ok(owners_card_groups.get(card_group_name).unwrap());
+                    }
+                }
+            }
+
+            return Err(format!(
+                "None of the card groups had any cards in: {}",
+                first_with_cards_of
+                    .iter()
+                    .map(|k| k.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", "),
+            ));
+        }
+
+        return Err(
+            "Invalid card group identifier. Neither name nor 'first_with_cards_of' set".into(),
+        );
+    }
+
+    // TODO: Add an error type
+    fn card_group_mut<'a>(
+        &self,
+        game_state: &'a mut GameState,
+    ) -> Result<&'a mut CardGroup, String> {
+        let owners_card_groups = self.owners_card_groups_mut(game_state)?;
+        let owners_card_groups_names = owners_card_groups
+            .keys()
+            .map(|k| k.to_string())
+            .collect::<Vec<String>>()
+            .join(", ");
+
+        if let Some(name) = &self.name {
+            if owners_card_groups.contains_key(name) {
+                return Ok(owners_card_groups.get_mut(name).unwrap());
+            } else {
+                return Err(format!(
+                    "Player hand card group name doesn't match anything. Given: {}. Available: {}",
+                    name, owners_card_groups_names,
+                )
+                .into());
+            }
+        } else if let Some(first_with_cards_of) = &self.first_with_cards_of {
+            for card_group_name in first_with_cards_of {
+                if owners_card_groups.contains_key(card_group_name) {
+                    if owners_card_groups.get(card_group_name).unwrap().cards.len() > 0 {
+                        return Ok(owners_card_groups.get_mut(card_group_name).unwrap());
                     }
                 }
             }
@@ -155,49 +245,71 @@ pub struct CardSwap {
 
 impl CardSwap {
     fn execute(&self, game_state: &mut GameState) -> Result<(), String> {
-        // TODO: START HERE: prompt user to figure out what cards to swap, move it into user_input
-        // module
+        // TODO: Validate indices
+        // TODO: Ensure swapping is balanced
 
-        let mut card_to_move_from_first_to_second: Vec<isize> = Vec::new();
-        let mut card_to_move_from_second_to_first: Vec<isize> = Vec::new();
+        let mut cards_to_move_from_first_to_second: Vec<Card> = Vec::new();
+        let mut cards_to_move_from_second_to_first: Vec<Card> = Vec::new();
+        let hmm = &self.first_card_group.card_group(game_state)?.cards;
+        let ffs = hmm.len();
         loop {
             println!(
                 "Select card to move from {} into {}. Use 0-{} or -1 to finish:",
                 self.first_card_group,
                 self.second_card_group,
-                self.first_card_group.card_group(game_state)?.cards.len(),
+                ffs - 1,
             );
-            // TODO: Validate index is valid
             let selected_card_index: isize = read!();
             if selected_card_index == -1 {
                 break;
             }
 
-            card_to_move_from_first_to_second.push(selected_card_index);
+            cards_to_move_from_first_to_second
+                .push(hmm.get(selected_card_index as usize).unwrap().clone());
         }
 
+        let hmm = &self.second_card_group.card_group(game_state)?.cards;
+        let ffs = hmm.len();
         loop {
             println!(
                 "Select card to move from {} into {}. Use 0-{} or -1 to finish:",
                 self.second_card_group,
                 self.first_card_group,
-                self.second_card_group.card_group(game_state)?.cards.len(),
+                ffs - 1,
             );
-            // TODO: Validate index is valid
             let selected_card_index: isize = read!();
             if selected_card_index == -1 {
                 break;
             }
 
-            card_to_move_from_second_to_first.push(selected_card_index);
+            cards_to_move_from_second_to_first
+                .push(hmm.get(selected_card_index as usize).unwrap().clone());
         }
 
-        for card_index in card_to_move_from_first_to_second {
-            let mut cards = self.first_card_group.card_group(game_state)?.cards;
+        let first_card_group_cards = &mut self.first_card_group.card_group_mut(game_state)?.cards;
+        for card_ref in &cards_to_move_from_first_to_second {
+            let index = first_card_group_cards
+                .iter()
+                .position(|x| x == card_ref)
+                .unwrap();
+            first_card_group_cards.remove(index);
+        }
+        for card in cards_to_move_from_first_to_second.into_iter() {
+            let second_card_group = self.second_card_group.card_group_mut(game_state)?;
+            second_card_group.cards.push(card);
+        }
 
-            let card = cards.remove(card_index as usize);
-
-            // pop one off and move it to the other, then do  the same to the other group
+        let second_card_group_cards = &mut self.second_card_group.card_group_mut(game_state)?.cards;
+        for card_ref in &cards_to_move_from_second_to_first {
+            let index = second_card_group_cards
+                .iter()
+                .position(|x| x == card_ref)
+                .unwrap();
+            second_card_group_cards.remove(index);
+        }
+        for card in cards_to_move_from_second_to_first.into_iter() {
+            let first_card_group = self.first_card_group.card_group_mut(game_state)?;
+            first_card_group.cards.push(card);
         }
 
         Ok(())
@@ -274,7 +386,7 @@ enum Condition {
 }
 
 impl Condition {
-    fn met(&self, game_state: &GameState) -> Result<bool, String> {
+    fn met(&self, game_state: &mut GameState) -> Result<bool, String> {
         match self {
             Condition::AnyPlayedCardRank { equals } => Ok(true),
             Condition::CardGroupSize {
@@ -356,7 +468,7 @@ impl fmt::Display for Action {
 }
 
 impl Action {
-    fn available(&self, game_state: &GameState) -> Result<bool, String> {
+    fn available(&self, game_state: &mut GameState) -> Result<bool, String> {
         for condition in self.conditions.iter() {
             if !condition.met(game_state)? {
                 return Ok(false);
@@ -428,11 +540,7 @@ pub struct GameRules {
 }
 
 impl GameRules {
-    pub fn available_actions(&self, game_state: &GameState) -> Result<Vec<&Action>, String> {
-        // TODO: START HERE:
-        //  Need to implement game flow into actions
-        //  Then implement actions and conditions
-
+    pub fn available_actions(&self, game_state: &mut GameState) -> Result<Vec<&Action>, String> {
         self.game_flow.iter().try_fold(
             Vec::new(),
             |mut available_actions, turn_type| -> Result<Vec<&Action>, String> {

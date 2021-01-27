@@ -35,6 +35,11 @@ impl GameState {
         };
     }
 
+    pub fn offset_from_current_player_mut(&mut self, offset: usize) -> Option<&mut Player> {
+        let player_index = (self.player_turn_index + offset) % self.players.len();
+        return self.players.get_mut(player_index);
+    }
+
     pub fn offset_from_current_player(&self, offset: usize) -> Option<&Player> {
         let player_index = (self.player_turn_index + offset) % self.players.len();
         return self.players.get(player_index);
