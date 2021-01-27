@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
+use text_io::read;
 
 use serde::{Deserialize, Serialize};
 
@@ -13,11 +14,33 @@ pub enum CardGroupOwner {
     RelativePlayer { offset_from_current_player: usize },
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardGroupId {
     owner: CardGroupOwner,
     name: Option<String>,
     first_with_cards_of: Option<Vec<String>>,
+}
+
+impl fmt::Debug for CardGroupId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl fmt::Display for CardGroupId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(card_group_name) = &self.name {
+            write!(f, "{}", card_group_name)
+        } else if let Some(first_with_cards_of) = &self.first_with_cards_of {
+            write!(
+                f,
+                "First group with cards of: {}",
+                first_with_cards_of.join(", ")
+            )
+        } else {
+            write!(f, "Expected card group ID to either have a name or a list of card groups with a first-with-cards condition, but found neither")
+        }
+    }
 }
 
 const COMMUNAL_CARDS: &str = "communal_cards";
