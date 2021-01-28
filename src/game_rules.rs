@@ -45,7 +45,7 @@ impl fmt::Display for CardGroupId {
 
 const COMMUNAL_CARDS: &str = "communal_cards";
 
-// TODO: Dedup _mut and not mut methods
+// TODO: DRY _mut and not mut method definitions
 
 impl CardGroupId {
     fn owners_card_groups<'a>(
@@ -361,7 +361,8 @@ enum CardCondition {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 enum Condition {
-    AnyPlayedCardRank {
+    LastPlayedCardRank {
+        card_group_name: CardGroupId,
         equals: usize,
     },
     CardGroupSize {
@@ -384,7 +385,17 @@ enum Condition {
 impl Condition {
     fn met(&self, game_state: &mut GameState) -> Result<bool, String> {
         match self {
-            Condition::AnyPlayedCardRank { equals } => Ok(true),
+            Condition::LastPlayedCardRank {
+                card_group_name,
+                equals,
+            } => {
+                let card_group = card_group_name.card_group(game_state)?;
+                if let Some(last_card_in_group) = card_group.cards.last() {
+                    Ok(last_card_in_group.rank == CardRank::from_usize(*equals))
+                } else {
+                    Ok(false)
+                }
+            }
             Condition::CardGroupSize {
                 card_group_name,
                 operator,

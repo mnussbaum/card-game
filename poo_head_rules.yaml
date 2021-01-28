@@ -131,7 +131,11 @@ game_flow:
             consequences:
               - description: "Threes are wild and make the next player _pick-up the deck_ their turn"
                 conditions:
-                  - AnyPlayedCardRank:
+                  - LastPlayedCardRank:
+                      card_group_name:
+                        owner:
+                          Name: communal_cards
+                        name: active_pile
                       equals: 3
                 verb:
                   MoveCards:
@@ -146,14 +150,22 @@ game_flow:
                       name: hand_cards
               - description: "Threes are wild and make the next player pick-up the deck _as their turn_"
                 conditions:
-                  - AnyPlayedCardRank:
+                  - LastPlayedCardRank:
+                      card_group_name:
+                        owner:
+                          Name: communal_cards
+                        name: active_pile
                       equals: 3
                 verb:
                   MoveNextTurn:
                     offset_from_current_player: 2
               - description: "Tens are wild, _discard the active pile_, and let the player play again"
                 conditions:
-                  - AnyPlayedCardRank:
+                  - LastPlayedCardRank:
+                      card_group_name:
+                        owner:
+                          Name: communal_cards
+                        name: active_pile
                       equals: 10
                 verb:
                   MoveCards:
@@ -167,7 +179,11 @@ game_flow:
                       name: discard_pile
               - description: "Tens are wild, discard the active pile, and _let the player play again_"
                 conditions:
-                  - AnyPlayedCardRank:
+                  - LastPlayedCardRank:
+                      card_group_name:
+                        owner:
+                          Name: communal_cards
+                        name: active_pile
                       equals: 10
                 verb:
                   MoveNextTurn:
