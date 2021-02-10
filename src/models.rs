@@ -1,5 +1,6 @@
 use super::schema::{games, games_players, players};
 use diesel::{Insertable, Queryable};
+use juniper::{GraphQLInputObject, GraphQLObject};
 use serde::{Deserialize, Serialize};
 
 #[derive(Identifiable, Queryable, Associations, Serialize)]
@@ -14,7 +15,8 @@ pub struct NewPlayer<'a> {
     pub name: &'a str,
 }
 
-#[derive(Identifiable, Queryable, Associations, Serialize)]
+#[derive(GraphQLObject, Identifiable, Queryable, Associations, Serialize)]
+#[graphql(description = "Game")]
 pub struct Game {
     pub id: i32,
     pub player_turn_index: i32,
@@ -26,8 +28,9 @@ pub struct Game {
     // Turn action prompts into a field on game state that can be displayed to the user
 }
 
-#[derive(Insertable, Deserialize)]
+#[derive(GraphQLInputObject, Insertable, Deserialize)]
 #[table_name = "games"]
+#[graphql(description = "New game")]
 pub struct NewGame {
     pub player_turn_index: i32,
 }
