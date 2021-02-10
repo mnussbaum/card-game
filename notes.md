@@ -23,3 +23,16 @@
 * Remove actions returning conditions for future cards
 * Instead have actions look at game state like card value to determine if
   they're actually playable
+
+* Need to create all my models as diesel postgres models
+  - Game (nix state)
+  - Player (maybe just User?)
+  - Player hand
+  - Player hand card groups
+  - Cards themselves?
+  - Game rules
+  - Actions
+
+* Last thing was I moved all the files out of workspaces and back to the top level
+* Next step is to fix imports
+* Then make all the models and migrations

@@ -5,7 +5,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Deck {
     pub cards: Vec<Card>,
 }

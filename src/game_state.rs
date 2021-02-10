@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 
+use serde::Serialize;
+
 use crate::card_deck::{CardGroup, Deck};
-use crate::game_rules::{Action, GameRules};
+use crate::game_rules::GameRules;
 use crate::player::Player;
 use crate::user_input;
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct GameState {
     pub communal_cards: HashMap<String, CardGroup>,
     deck: Deck,
