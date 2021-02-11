@@ -9,7 +9,7 @@ pub mod schema;
 use std::io;
 
 use diesel::pg::PgConnection;
-use diesel::r2d2::{ConnectionManager, Pool, PoolError, PooledConnection};
+use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use std::env;
 
 use actix_cors::Cors;
@@ -81,17 +81,6 @@ pub async fn woo() -> HttpResponse {
 //         .get_result(&*db_conn)
 //         .expect("Error saving player");
 //
-//     // let new_game = NewGame {
-//     //     player_turn_index: 0,
-//     // };
-//     // let game: Game = diesel::insert_into(games::table)
-//     //     .values(&new_game)
-//     //     .get_result(&*db_conn)
-//     //     .expect("Error saving game");
-//     // let players = players::table
-//     //     .filter(players::id.eq(any(games_players_ids)))
-//     //     .load::<Player>(&*db_conn)
-//     //     .expect("could not load players");
 //     let game: Game = games::table.find(1).first(&*db_conn).unwrap();
 //     let players = players::table
 //         .filter(players::id.eq(1))
@@ -102,14 +91,14 @@ pub async fn woo() -> HttpResponse {
 //         game_id: game.id,
 //         player_id: player.id,
 //     };
-//     let _: GamesPlayer = diesel::insert_into(games_players::table)
+//     let _: GamePlayer = diesel::insert_into(games_players::table)
 //         .values(&new_game_player)
 //         .get_result(&*db_conn)
 //         .expect("Error saving game");
 //
-//     let games_players_ids = GamesPlayer::belonging_to(&game).select(games_players::player_id);
+//     let game_player_ids = GamePlayer::belonging_to(&game).select(games_players::player_id);
 //     let players = players::table
-//         .filter(players::id.eq(any(games_players_ids)))
+//         .filter(players::id.eq(any(game_player_ids)))
 //         .load::<Player>(&*db_conn)
 //         .expect("could not load players");
 //
@@ -161,32 +150,18 @@ pub struct QueryRoot;
 
 #[graphql_object(context = Context)]
 impl QueryRoot {
-    #[graphql(description = "Query a game status")]
+    #[graphql(description = "Query for games")]
     fn games(context: &Context, id: Option<i32>, player_id: Option<i32>) -> FieldResult<Vec<Game>> {
-        use diesel::pg::expression::dsl::any;
-
         let connection = &context.db_pool.get()?;
 
-        let games: Vec<Game>;
-        if let Some(id) = id {
-            games = games::table
-                .filter(games::id.eq(id))
-                .load::<Game>(connection)
-                .expect("could not load game");
+        let games = if let Some(id) = id {
+            Game::find_by_id(connection, id)?
         } else if let Some(player_id) = player_id {
-            let player = players::table
-                .find(player_id)
-                .load::<Player>(connection)
-                .expect("could not load player");
-            let game_ids = GamesPlayer::belonging_to(&player).select(games_players::game_id);
-
-            games = games::table
-                .filter(games::id.eq(any(game_ids)))
-                .load::<Game>(connection)
-                .expect("could not load games");
+            Game::belongs_to_player_id(connection, player_id)?
         } else {
-            panic!("NEED ARG");
-        }
+            return Err("No args")?;
+        };
+
         Ok(games)
     }
 }
@@ -218,11 +193,9 @@ pub fn create_context(db_pool: Arc<DbPool>) -> Context {
     Context { db_pool }
 }
 
-use actix_web::http::header::HeaderMap;
 use actix_web::http::Method;
 use actix_web::{Error, HttpRequest};
 use juniper::http::{playground::playground_source, GraphQLRequest};
-use juniper::serde::ser::Error as SerdeError;
 
 pub async fn graphql(
     req: HttpRequest,
