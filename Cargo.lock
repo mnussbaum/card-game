@@ -485,7 +485,6 @@ dependencies = [
  "env_logger",
  "futures",
  "juniper",
- "r2d2",
  "rand",
  "serde",
  "serde_yaml",
