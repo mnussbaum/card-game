@@ -3,25 +3,25 @@
 #[macro_use]
 extern crate diesel;
 
+pub mod db;
+pub mod graphql_schema;
 pub mod models;
 pub mod schema;
 
 use std::io;
-
-use diesel::pg::PgConnection;
-use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-use std::env;
+use std::sync::Arc;
 
 use actix_cors::Cors;
-use actix_web::{middleware, web, App, HttpResponse, HttpServer};
-use diesel::prelude::*;
+use actix_web::http::Method;
+use actix_web::{
+    middleware, web, App, Error as ActixWebError, HttpRequest, HttpResponse, HttpServer,
+};
+use juniper::http::{playground::playground_source, GraphQLRequest};
+
 use dotenv::dotenv;
 
-use models::*;
-use schema::*;
-
-pub type DbPool = Pool<ConnectionManager<PgConnection>>;
-pub type DbPooledConnection = PooledConnection<ConnectionManager<PgConnection>>;
+use db::{create_db_pool, DbPool};
+use graphql_schema::{create_graphql_context, create_graphql_schema, SchemaGraphQL};
 
 #[actix_rt::main]
 async fn main() -> io::Result<()> {
@@ -30,12 +30,9 @@ async fn main() -> io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_web=debug");
     env_logger::init();
 
-    let graphql_schema = std::sync::Arc::new(create_graphql_schema());
+    let graphql_schema = Arc::new(create_graphql_schema());
+    let db_pool = create_db_pool().expect("failed to create DB pool");
 
-    let manager = ConnectionManager::<PgConnection>::new(
-        env::var("DATABASE_URL").expect("DATABASE_URL must be set"),
-    );
-    let db_pool = Pool::builder().build(manager).unwrap();
     HttpServer::new(move || {
         App::new()
             .data(db_pool.clone())
@@ -64,146 +61,13 @@ async fn main() -> io::Result<()> {
     .await
 }
 
-pub async fn woo() -> HttpResponse {
-    let html = "hi";
-    HttpResponse::Ok()
-        .content_type("text/html; charset=utf-8")
-        .body(html)
-}
-
-// #[get("/")]
-// fn hmm(db_conn: DbConn) -> Json<Vec<Player>> {
-//     use diesel::pg::expression::dsl::any;
-//
-//     let new_player = NewPlayer { name: "steve" };
-//     let player: Player = diesel::insert_into(players::table)
-//         .values(&new_player)
-//         .get_result(&*db_conn)
-//         .expect("Error saving player");
-//
-//     let game: Game = games::table.find(1).first(&*db_conn).unwrap();
-//     let players = players::table
-//         .filter(players::id.eq(1))
-//         .load::<Player>(&*db_conn)
-//         .expect("could not load players");
-//
-//     let new_game_player = NewGamePlayer {
-//         game_id: game.id,
-//         player_id: player.id,
-//     };
-//     let _: GamePlayer = diesel::insert_into(games_players::table)
-//         .values(&new_game_player)
-//         .get_result(&*db_conn)
-//         .expect("Error saving game");
-//
-//     let game_player_ids = GamePlayer::belonging_to(&game).select(games_players::player_id);
-//     let players = players::table
-//         .filter(players::id.eq(any(game_player_ids)))
-//         .load::<Player>(&*db_conn)
-//         .expect("could not load players");
-//
-//     Json(players)
-// }
-
-// #[post("/games/create")]
-// fn create_game(db_conn: DbConn) -> Json<card_table::GameState> {
-//     let new_game = card_table::new_game().unwrap();
-//
-//     Json(games[&uid].clone())
-// }
-//
-// #[get("/games/<uid>")]
-// fn get_game(db_conn: DbConn) -> Json<card_table::GameState> {
-//     let games = games.read().unwrap();
-//     Json(games[&uid].clone())
-// }
-//
-// // #[put("/games/<uid>/update", format = "application/json", data = "<game>")]
-// #[put("/games/<uid>/update")]
-// fn update_game(db_conn: DbConn) {}
-
-use std::sync::Arc;
-
-use juniper::{graphql_object, RootNode};
-use juniper::{EmptySubscription, FieldResult};
-
-#[derive(Clone)]
-pub struct Context {
-    pub db_pool: Arc<DbPool>,
-}
-
-impl juniper::Context for Context {}
-
-pub async fn playground() -> HttpResponse {
-    let html = playground_source("/graphql", None);
-    HttpResponse::Ok()
-        .content_type("text/html; charset=utf-8")
-        .body(html)
-}
-
-pub struct QueryRoot;
-
-// TODO: START HERE: Next do a full CRUD for games
-// Then port more game fields and models into DB and graphql resources
-// Figure out how best to serialize game rules
-// Separate graphql code from main and DB code from main
-
-#[graphql_object(context = Context)]
-impl QueryRoot {
-    #[graphql(description = "Query for games")]
-    fn games(context: &Context, id: Option<i32>, player_id: Option<i32>) -> FieldResult<Vec<Game>> {
-        let connection = &context.db_pool.get()?;
-
-        let games = if let Some(id) = id {
-            Game::find_by_id(connection, id)?
-        } else if let Some(player_id) = player_id {
-            Game::belongs_to_player_id(connection, player_id)?
-        } else {
-            return Err("No args")?;
-        };
-
-        Ok(games)
-    }
-}
-
-pub struct MutationRoot;
-
-#[graphql_object(context = Context)]
-impl MutationRoot {
-    #[graphql(description = "Add player to game")]
-    fn update_game(context: &Context, data: NewGame) -> FieldResult<Game> {
-        let connection = &context.db_pool.get()?;
-
-        let game: Game = diesel::insert_into(games::table)
-            .values(&data)
-            .get_result(connection)
-            .expect("Error saving game");
-
-        Ok(game)
-    }
-}
-
-pub type SchemaGraphQL = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription<Context>>;
-
-pub fn create_graphql_schema() -> SchemaGraphQL {
-    SchemaGraphQL::new(QueryRoot {}, MutationRoot {}, EmptySubscription::new())
-}
-
-pub fn create_context(db_pool: Arc<DbPool>) -> Context {
-    Context { db_pool }
-}
-
-use actix_web::http::Method;
-use actix_web::{Error, HttpRequest};
-use juniper::http::{playground::playground_source, GraphQLRequest};
-
 pub async fn graphql(
     req: HttpRequest,
     st: web::Data<Arc<SchemaGraphQL>>,
     data_query: Option<web::Query<GraphQLRequest>>,
     data_body: Option<web::Json<GraphQLRequest>>,
     db_pool: web::Data<DbPool>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, ActixWebError> {
     let data = match *req.method() {
         Method::GET => data_query.unwrap().into_inner(),
         _ => data_body.unwrap().into_inner(),
@@ -220,8 +84,15 @@ pub async fn graphql(
     // }
 
     let db_pool = (*db_pool).clone();
-    let ctx = create_context(db_pool);
+    let ctx = create_graphql_context(db_pool);
     let res = data.execute(&st, &ctx).await;
 
     Ok(HttpResponse::Ok().json(res))
+}
+
+pub async fn playground() -> HttpResponse {
+    let html = playground_source("/graphql", None);
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(html)
 }
