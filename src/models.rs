@@ -20,7 +20,7 @@ pub struct NewPlayer<'a> {
 }
 
 #[derive(GraphQLObject, Identifiable, Queryable, Associations, Serialize)]
-#[graphql(description = "Game")]
+#[graphql(description = "A game")]
 pub struct Game {
     pub id: i32,
     pub player_turn_index: i32,
