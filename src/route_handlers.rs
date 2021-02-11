@@ -10,7 +10,7 @@ use crate::graphql_schema::{create_graphql_context, SchemaGraphQL};
 
 pub async fn graphql(
     req: HttpRequest,
-    st: web::Data<Arc<SchemaGraphQL>>,
+    graphql_schema: web::Data<Arc<SchemaGraphQL>>,
     data_query: Option<web::Query<GraphQLRequest>>,
     data_body: Option<web::Json<GraphQLRequest>>,
     db_pool: web::Data<DbPool>,
@@ -20,19 +20,9 @@ pub async fn graphql(
         _ => data_body.unwrap().into_inner(),
     };
 
-    // let introspection queries through
-    // if data.operation_name() != Some("IntrospectionQuery") {
-    //     // validate key for all other requests
-    //     if let Err(e) = validate_key(&headers, key.get_ref()) {
-    //         let err = GraphQLErrors::new(e);
-    //
-    //         return Ok(HttpResponse::Ok().json(&err));
-    //     }
-    // }
-
     let db_pool = (*db_pool).clone();
-    let ctx = create_graphql_context(db_pool);
-    let res = data.execute(&st, &ctx).await;
+    let graphql_context = create_graphql_context(db_pool);
+    let res = data.execute(&graphql_schema, &graphql_context).await;
 
     Ok(HttpResponse::Ok().json(res))
 }
