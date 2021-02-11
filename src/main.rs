@@ -39,11 +39,11 @@ async fn main() -> io::Result<()> {
             .data(graphql_schema.clone())
             .wrap(middleware::Compress::default())
             .wrap(middleware::Logger::default())
-            // .wrap(
-            //     Cors::default()
-            //         .allowed_origin("*")
-            //         .allowed_methods(vec!["GET", "POST"]),
-            // )
+            .wrap(
+                Cors::default()
+                    .allowed_origin("http://localhost:8000")
+                    .allowed_methods(vec!["GET", "POST"]),
+            )
             .service(
                 web::resource("/graphql")
                     .route(web::get().to(graphql))
