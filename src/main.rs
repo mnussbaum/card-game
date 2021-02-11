@@ -154,9 +154,7 @@ pub async fn playground() -> HttpResponse {
 
 pub struct QueryRoot;
 
-// TODO: START HERE: Have game by ID working.
-// Next do games by player
-// Then do a full CRUD for games
+// TODO: START HERE: Next do a full CRUD for games
 // Then port more game fields and models into DB and graphql resources
 // Figure out how best to serialize game rules
 // Separate graphql code from main and DB code from main
@@ -164,14 +162,32 @@ pub struct QueryRoot;
 #[graphql_object(context = Context)]
 impl QueryRoot {
     #[graphql(description = "Query a game status")]
-    fn game(context: &Context, id: i32) -> FieldResult<Game> {
+    fn games(context: &Context, id: Option<i32>, player_id: Option<i32>) -> FieldResult<Vec<Game>> {
+        use diesel::pg::expression::dsl::any;
+
         let connection = &context.db_pool.get()?;
 
-        let mut games = games::table
-            .filter(games::id.eq(id))
-            .load::<Game>(connection)
-            .expect("could not load game");
-        Ok(games.pop().unwrap())
+        let games: Vec<Game>;
+        if let Some(id) = id {
+            games = games::table
+                .filter(games::id.eq(id))
+                .load::<Game>(connection)
+                .expect("could not load game");
+        } else if let Some(player_id) = player_id {
+            let player = players::table
+                .find(player_id)
+                .load::<Player>(connection)
+                .expect("could not load player");
+            let game_ids = GamesPlayer::belonging_to(&player).select(games_players::game_id);
+
+            games = games::table
+                .filter(games::id.eq(any(game_ids)))
+                .load::<Game>(connection)
+                .expect("could not load games");
+        } else {
+            panic!("NEED ARG");
+        }
+        Ok(games)
     }
 }
 
