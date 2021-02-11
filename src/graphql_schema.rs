@@ -15,14 +15,24 @@ impl juniper::Context for Context {}
 
 pub struct QueryRoot;
 
-// TODO: START HERE: Next do a full CRUD for games
-// Then port more game fields and models into DB and graphql resources
-// Figure out how best to serialize game rules
-// Then migrate existing logic into new models
-// Then use juniper (aka graphql)/actix/diesel examples to serve games over websockets (aka
-// graphql subscriptions)
-// Then use something like Apollo on the front end to receive game state
-// Turn action prompts into a field on game state that can be displayed to the user
+// TODO: START HERE:
+// * Create new game
+// * Add user auth
+// * Only allow users to view games they're in
+// * When users request a game also give them their available actions
+// * Only let users see cards they have perms for
+//
+// * Figure out how to specify necessary user input in serialized actions
+// * Prompt user for input client side
+// * Send a mutation request in to take an action - include game ID, serialized action with inputs
+//   filled
+// * Ensure user actually has action available to them, and that filled inputs are valid
+// * Execute action with inputs
+//
+// * Port more game fields and models into DB and graphql resources
+// * Migrate existing logic into new models
+// * Use websockets
+// * Use something like Apollo on the front end to receive game state
 
 #[graphql_object(context = Context)]
 impl QueryRoot {
