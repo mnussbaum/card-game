@@ -3,12 +3,12 @@ use std::sync::Arc;
 use juniper::{graphql_object, RootNode};
 use juniper::{EmptySubscription, FieldResult};
 
-use crate::db::DbPool;
+use crate::db::Pool;
 use crate::models::{Game, NewGame};
 
 #[derive(Clone)]
 pub struct Context {
-    pub db_pool: Arc<DbPool>,
+    pub db_pool: Arc<Pool>,
 }
 
 impl juniper::Context for Context {}
@@ -16,8 +16,9 @@ impl juniper::Context for Context {}
 pub struct QueryRoot;
 
 // TODO: START HERE:
+// * Add user registration and login forms
+// * Clean up copied user code
 // * Create new game
-// * Add user auth
 // * Only allow users to view games they're in
 // * When users request a game also give them their available actions
 // * Only let users see cards they have perms for
@@ -43,7 +44,7 @@ impl QueryRoot {
         let games = if let Some(id) = id {
             Game::find_by_id(connection, id)?
         } else if let Some(player_id) = player_id {
-            Game::belongs_to_player_id(connection, player_id)?
+            Game::belongs_to_user_id(connection, player_id)?
         } else {
             return Err("Query requires either a game ID or a PLAYER_ID")?;
         };
@@ -76,6 +77,6 @@ pub fn create_graphql_schema() -> SchemaGraphQL {
     SchemaGraphQL::new(QueryRoot {}, MutationRoot {}, EmptySubscription::new())
 }
 
-pub fn create_graphql_context(db_pool: Arc<DbPool>) -> Context {
+pub fn create_graphql_context(db_pool: Arc<Pool>) -> Context {
     Context { db_pool }
 }

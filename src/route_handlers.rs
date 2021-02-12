@@ -5,15 +5,15 @@ use actix_web::{web, Error as ActixWebError, HttpRequest, HttpResponse};
 
 use juniper::http::{playground::playground_source, GraphQLRequest};
 
-use crate::db::DbPool;
-use crate::graphql_schema::{create_graphql_context, SchemaGraphQL};
+use crate::db::Pool;
+use crate::graphql::{create_graphql_context, SchemaGraphQL};
 
 pub async fn graphql(
     req: HttpRequest,
     graphql_schema: web::Data<Arc<SchemaGraphQL>>,
     data_query: Option<web::Query<GraphQLRequest>>,
     data_body: Option<web::Json<GraphQLRequest>>,
-    db_pool: web::Data<DbPool>,
+    db_pool: web::Data<Pool>,
 ) -> Result<HttpResponse, ActixWebError> {
     let data = match *req.method() {
         Method::GET => data_query.unwrap().into_inner(),

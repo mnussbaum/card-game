@@ -1,34 +1,26 @@
+use chrono::NaiveDateTime;
+
 use diesel::prelude::*;
 use diesel::{Insertable, Queryable};
 
 use juniper::{GraphQLInputObject, GraphQLObject};
 use serde::{Deserialize, Serialize};
 
-use super::db::DbPooledConnection;
-use super::schema::{games, games_players, players};
-
-#[derive(Identifiable, Queryable, Associations, Serialize)]
-pub struct Player {
-    pub id: i32,
-    pub name: String,
-}
-
-#[derive(Insertable, Deserialize)]
-#[table_name = "players"]
-pub struct NewPlayer<'a> {
-    pub name: &'a str,
-}
+use crate::db::PooledConnection;
+use crate::schema::{games, games_users, users};
+use crate::user::model::User;
 
 #[derive(GraphQLObject, Identifiable, Queryable, Associations, Serialize)]
 #[graphql(description = "A game")]
 pub struct Game {
     pub id: i32,
     pub player_turn_index: i32,
+    pub created_at: NaiveDateTime,
 }
 
 impl Game {
     pub fn find_by_id(
-        connection: &DbPooledConnection,
+        connection: &PooledConnection,
         id: i32,
     ) -> Result<Vec<Game>, diesel::result::Error> {
         games::table
@@ -36,13 +28,13 @@ impl Game {
             .load::<Game>(connection)
     }
 
-    pub fn belongs_to_player_id(
-        connection: &DbPooledConnection,
-        player_id: i32,
+    pub fn belongs_to_user_id(
+        connection: &PooledConnection,
+        user_id: i32,
     ) -> Result<Vec<Game>, diesel::result::Error> {
-        players::table
-            .inner_join(games_players::table.inner_join(games::table))
-            .filter(players::id.eq(player_id))
+        users::table
+            .inner_join(games_users::table.inner_join(games::table))
+            .filter(users::id.eq(user_id))
             .select(games::all_columns)
             .load::<Game>(connection)
     }
@@ -57,17 +49,18 @@ pub struct NewGame {
 
 #[derive(Identifiable, Queryable, Associations)]
 #[belongs_to(Game)]
-#[belongs_to(Player)]
-#[table_name = "games_players"]
-pub struct GamePlayer {
+#[belongs_to(User)]
+#[table_name = "games_users"]
+pub struct GameUser {
     pub id: i32,
     pub game_id: i32,
-    pub player_id: i32,
+    pub user_id: i32,
+    pub created_at: NaiveDateTime,
 }
 
 #[derive(Insertable)]
-#[table_name = "games_players"]
-pub struct NewGamePlayer {
+#[table_name = "games_users"]
+pub struct NewGameUser {
     pub game_id: i32,
-    pub player_id: i32,
+    pub user_id: i32,
 }
