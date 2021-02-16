@@ -30,11 +30,17 @@ impl FromRequest for LoggedInUser {
 }
 
 pub async fn register(
-    user_data: web::Json<UserData>,
+    user_data: web::Form<UserData>,
     pool: web::Data<Pool>,
 ) -> Result<HttpResponse, ServiceError> {
     user::register(user_data.into_inner(), pool)
         .map(|slim_user| HttpResponse::Ok().json(&slim_user))
+}
+
+pub(super) async fn register_view() -> Result<HttpResponse, ServiceError> {
+    Ok(HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(include_str!("static/register.html")))
 }
 
 #[derive(Debug, Deserialize)]
@@ -44,7 +50,7 @@ pub(super) struct LoginQuery {
 }
 
 pub(super) async fn login(
-    auth_data: web::Json<LoginQuery>,
+    auth_data: web::Form<LoginQuery>,
     id: Identity,
     pool: web::Data<Pool>,
 ) -> Result<HttpResponse, ServiceError> {
@@ -55,6 +61,12 @@ pub(super) async fn login(
 
         Ok(HttpResponse::Ok().json(slim_user))
     })
+}
+
+pub(super) async fn login_view() -> Result<HttpResponse, ServiceError> {
+    Ok(HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(include_str!("static/login.html")))
 }
 
 pub fn me(logged_in_user: LoggedInUser) -> HttpResponse {
