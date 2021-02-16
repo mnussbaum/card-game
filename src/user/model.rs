@@ -34,9 +34,10 @@ pub struct UserData {
 #[derive(Debug, Serialize, Deserialize, Clone, juniper::GraphQLObject)]
 pub struct SlimUser {
     pub email: String,
+    pub id: i32,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct LoggedInUser(pub Option<SlimUser>);
 
 impl From<SlimUser> for LoggedInUser {
@@ -64,8 +65,8 @@ impl From<UserData> for InsertableUser {
 
 impl From<User> for SlimUser {
     fn from(user: User) -> Self {
-        let User { email, .. } = user;
+        let User { id, email, .. } = user;
 
-        Self { email }
+        Self { id, email }
     }
 }

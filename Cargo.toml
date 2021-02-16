@@ -5,19 +5,20 @@ authors = ["mnussbaum <michaelnussbaum08@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-argon2rs = "0.2"
 actix-cors = "0.5.4"
 actix-identity = "0.3.1"
 actix-rt = "1.1.1"
 actix-web = "3.3.2"
+argon2rs = "0.2"
 chrono = { version = "0.4", features = ["serde"] }
 diesel = {version = "1.4", features = ["chrono", "postgres", "r2d2", "uuidv07"]}
 dotenv = "0.15"
 env_logger = "0.8.2"
 futures = "0.3.12"
 juniper = "0.15.3"
-rand = "0.7"
+log = "0.4"
 r2d2 = "0.8.9"
+rand = "0.7"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 serde_yaml = "0.8"

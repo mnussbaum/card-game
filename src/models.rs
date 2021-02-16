@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::db::PooledConnection;
 use crate::schema::{games, games_users, users};
-use crate::user::model::User;
+use crate::user::model::{SlimUser, User};
 
 #[derive(GraphQLObject, Identifiable, Queryable, Associations, Serialize)]
 #[graphql(description = "A game")]
@@ -19,22 +19,26 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn find_by_id(
+    pub fn find_by_user_and_id(
         connection: &PooledConnection,
+        user: &SlimUser,
         id: i32,
     ) -> Result<Vec<Game>, diesel::result::Error> {
-        games::table
+        users::table
+            .inner_join(games_users::table.inner_join(games::table))
+            .filter(users::id.eq(user.id))
+            .select(games::all_columns)
             .filter(games::id.eq(id))
             .load::<Game>(connection)
     }
 
-    pub fn belongs_to_user_id(
+    pub fn belongs_to_user(
         connection: &PooledConnection,
-        user_id: i32,
+        user: &SlimUser,
     ) -> Result<Vec<Game>, diesel::result::Error> {
         users::table
             .inner_join(games_users::table.inner_join(games::table))
-            .filter(users::id.eq(user_id))
+            .filter(users::id.eq(user.id))
             .select(games::all_columns)
             .load::<Game>(connection)
     }
