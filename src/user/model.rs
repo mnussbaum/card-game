@@ -7,7 +7,7 @@ use crate::user::util::{make_hash, make_salt};
 
 #[derive(Debug, Serialize, Deserialize, Queryable, juniper::GraphQLObject)]
 pub struct User {
-    pub user_id: i32,
+    pub id: i32,
     pub user_uuid: Uuid,
     #[graphql(skip)]
     pub hash: Vec<u8>,
@@ -36,6 +36,7 @@ pub struct UserData {
     pub password: String,
 }
 
+// SlimUser represents the user info stored in a cookie
 #[derive(Debug, Serialize, Deserialize, Clone, juniper::GraphQLObject)]
 pub struct SlimUser {
     pub user_uuid: Uuid,
@@ -43,11 +44,11 @@ pub struct SlimUser {
 }
 
 #[derive(Clone, Default)]
-pub struct LoggedUser(pub Option<SlimUser>);
+pub struct LoggedInUser(pub Option<SlimUser>);
 
-impl From<SlimUser> for LoggedUser {
+impl From<SlimUser> for LoggedInUser {
     fn from(slim_user: SlimUser) -> Self {
-        LoggedUser(Some(slim_user))
+        LoggedInUser(Some(slim_user))
     }
 }
 
@@ -72,6 +73,7 @@ impl From<UserData> for InsertableUser {
         }
     }
 }
+
 impl From<User> for SlimUser {
     fn from(user: User) -> Self {
         let User {

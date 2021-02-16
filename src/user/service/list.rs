@@ -1,8 +1,8 @@
-use crate::db::PooledConnection;
+use diesel::prelude::*;
+
 use crate::errors::ServiceResult;
 use crate::graphql::Context;
 use crate::user::model::User;
-use diesel::prelude::*;
 
 pub(crate) fn find_all_users(
     context: &Context,

@@ -4,11 +4,11 @@ use actix_web::{web, Error, FromRequest, HttpRequest, HttpResponse};
 
 use crate::db::Pool;
 use crate::errors::ServiceError;
-use crate::user::model::{LoggedUser, SlimUser, UserData};
+use crate::user::model::{LoggedInUser, SlimUser, UserData};
 use crate::user::service as user;
 use serde::Deserialize;
 
-impl FromRequest for LoggedUser {
+impl FromRequest for LoggedInUser {
     type Error = Error;
     type Future = futures::future::Ready<Result<Self, Self::Error>>;
     type Config = ();
@@ -19,13 +19,13 @@ impl FromRequest for LoggedUser {
         let slim_user = if let Some(identity) = identity {
             match serde_json::from_str::<SlimUser>(&identity) {
                 Err(e) => return futures::future::err(e.into()),
-                Ok(y) => Ok(Some(y)),
+                Ok(slim_user) => Ok(Some(slim_user)),
             }
         } else {
             Ok(None)
         };
 
-        futures::future::ready(slim_user.map(LoggedUser))
+        futures::future::ready(slim_user.map(LoggedInUser))
     }
 }
 
@@ -33,7 +33,8 @@ pub async fn register(
     user_data: web::Json<UserData>,
     pool: web::Data<Pool>,
 ) -> Result<HttpResponse, ServiceError> {
-    user::register(user_data.into_inner(), pool).map(|res| HttpResponse::Ok().json(&res))
+    user::register(user_data.into_inner(), pool)
+        .map(|slim_user| HttpResponse::Ok().json(&slim_user))
 }
 
 #[derive(Debug, Deserialize)]
@@ -47,22 +48,24 @@ pub(super) async fn login(
     id: Identity,
     pool: web::Data<Pool>,
 ) -> Result<HttpResponse, ServiceError> {
-    user::login(&auth_data.email, &auth_data.password, pool).and_then(|res| {
-        let user_string =
-            serde_json::to_string(&res).map_err(|_| ServiceError::InternalServerError)?;
-        id.remember(user_string);
-        Ok(HttpResponse::Ok().json(res))
+    user::login(&auth_data.email, &auth_data.password, pool).and_then(|slim_user| {
+        let slim_user_json =
+            serde_json::to_string(&slim_user).map_err(|_| ServiceError::InternalServerError)?;
+        id.remember(slim_user_json);
+
+        Ok(HttpResponse::Ok().json(slim_user))
     })
 }
 
-pub fn me(logged_user: LoggedUser) -> HttpResponse {
-    match logged_user.0 {
+pub fn me(logged_in_user: LoggedInUser) -> HttpResponse {
+    match logged_in_user.0 {
         None => HttpResponse::Unauthorized().json(ServiceError::Unauthorized),
-        Some(user) => HttpResponse::Ok().json(user),
+        Some(slim_user) => HttpResponse::Ok().json(slim_user),
     }
 }
 
 pub fn logout(id: Identity) -> HttpResponse {
     id.forget();
+
     HttpResponse::Ok().finish()
 }
