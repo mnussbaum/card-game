@@ -1,6 +1,6 @@
 use std::convert::From;
 
-use actix_web::{error::ResponseError, HttpResponse};
+use actix_web::HttpResponse;
 use diesel::result::Error as DBError;
 use juniper::graphql_value;
 use r2d2::Error as R2D2Error;
@@ -53,8 +53,7 @@ impl juniper::IntoFieldError for ServiceError {
     }
 }
 
-// impl ResponseError trait allows to convert our errors into http responses with appropriate data
-impl ResponseError for ServiceError {
+impl actix_web::error::ResponseError for ServiceError {
     fn error_response(&self) -> HttpResponse {
         match self {
             ServiceError::InternalServerError => {
@@ -68,18 +67,8 @@ impl ResponseError for ServiceError {
     }
 }
 
-// we can return early in our handlers if UUID provided by the user is not valid
-// and provide a custom message
-impl From<uuid::Error> for ServiceError {
-    fn from(_: uuid::Error) -> ServiceError {
-        ServiceError::BadRequest("Invalid UUID".into())
-    }
-}
-
 impl From<DBError> for ServiceError {
     fn from(error: DBError) -> ServiceError {
-        // Right now we just care about UniqueViolation from diesel
-        // But this would be helpful to easily map errors as our app grows
         match error {
             DBError::DatabaseError(_kind, info) => {
                 let message = info.details().unwrap_or_else(|| info.message()).to_string();
@@ -91,10 +80,8 @@ impl From<DBError> for ServiceError {
 }
 
 impl From<R2D2Error> for ServiceError {
-    fn from(error: R2D2Error) -> ServiceError {
-        // Right now we just care about UniqueViolation from diesel
-        // But this would be helpful to easily map errors as our app grows
-        ServiceError::InternalServerError
+    fn from(_: R2D2Error) -> ServiceError {
+        ServiceError::UnableToConnectToDb
     }
 }
 

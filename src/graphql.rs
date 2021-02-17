@@ -1,13 +1,11 @@
 use std::sync::Arc;
 
-use diesel::RunQueryDsl;
 use juniper::{graphql_object, RootNode};
 use juniper::{EmptySubscription, FieldResult};
 
 use crate::db::Pool;
 use crate::errors::ServiceError;
-use crate::models::{Game, NewGame, NewGameUser};
-use crate::schema;
+use crate::models::Game;
 use crate::user::model::{LoggedInUser, SlimUser};
 
 #[derive(Clone)]
@@ -82,15 +80,7 @@ pub struct MutationRoot<'a> {
 impl<'a> MutationRoot<'a> {
     #[graphql(description = "Create a new game")]
     fn create_game(context: &Context<'a>) -> FieldResult<Game> {
-        let new_game = NewGame {
-            player_turn_index: 0,
-        };
-
-        let game: Game = diesel::insert_into(schema::games::table)
-            .values(&new_game)
-            .get_result(&context.db_pool.get()?)?;
-
-        Ok(game)
+        Ok(Game::create(&context.db_pool.get()?)?)
     }
 
     #[graphql(description = "Add a player to game")]
@@ -99,12 +89,7 @@ impl<'a> MutationRoot<'a> {
         let connection = &context.db_pool.get()?;
         let game = Game::find_by_id(connection, game_id)?;
 
-        diesel::insert_into(schema::games_users::table)
-            .values(NewGameUser {
-                game_id,
-                user_id: user.id,
-            })
-            .execute(connection)?;
+        game.join(connection, user)?;
 
         Ok(game)
     }

@@ -7,6 +7,7 @@ use juniper::{GraphQLInputObject, GraphQLObject};
 use serde::{Deserialize, Serialize};
 
 use crate::db::PooledConnection;
+use crate::errors::ServiceResult;
 use crate::schema::{games, games_users, users};
 use crate::user::model::{SlimUser, User};
 
@@ -33,24 +34,45 @@ impl Game {
         connection: &PooledConnection,
         user: &SlimUser,
         id: i32,
-    ) -> Result<Vec<Game>, diesel::result::Error> {
-        users::table
+    ) -> ServiceResult<Vec<Self>> {
+        Ok(users::table
             .inner_join(games_users::table.inner_join(games::table))
             .filter(users::id.eq(user.id))
             .select(games::all_columns)
             .filter(games::id.eq(id))
-            .load::<Game>(connection)
+            .load::<Self>(connection)?)
     }
 
     pub fn belonging_to_user(
         connection: &PooledConnection,
         user: &SlimUser,
-    ) -> Result<Vec<Game>, diesel::result::Error> {
-        users::table
+    ) -> ServiceResult<Vec<Self>> {
+        Ok(users::table
             .inner_join(games_users::table.inner_join(games::table))
             .filter(users::id.eq(user.id))
             .select(games::all_columns)
-            .load::<Game>(connection)
+            .load::<Self>(connection)?)
+    }
+
+    pub fn create(connection: &PooledConnection) -> ServiceResult<Self> {
+        let new_game = NewGame {
+            player_turn_index: 0,
+        };
+
+        Ok(diesel::insert_into(games::table)
+            .values(&new_game)
+            .get_result(connection)?)
+    }
+
+    pub fn join(&self, connection: &PooledConnection, user: &SlimUser) -> ServiceResult<&Self> {
+        diesel::insert_into(games_users::table)
+            .values(NewGameUser {
+                game_id: self.id,
+                user_id: user.id,
+            })
+            .execute(connection)?;
+
+        Ok(self)
     }
 }
 
