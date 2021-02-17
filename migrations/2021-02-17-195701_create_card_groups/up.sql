@@ -1,7 +1,16 @@
+CREATE TYPE card_group_enum_layout
+    AS ENUM ('pile', 'spread');
+
+CREATE TYPE card_group_enum_visibility
+    AS ENUM ('face_down', 'face_up', 'top_face_up_rest_face_down', 'visible_to_owner');
+
 CREATE TABLE card_groups (
   id SERIAL PRIMARY KEY,
-  name VARCHAR NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  name VARCHAR NOT NULL,
+  initial_size INTEGER NOT NULL,
+  layout card_group_enum_layout NOT NULL,
+  visibility card_group_enum_visibility NOT NULL,
 
   -- The owner of a card group is either a user or a game in the case of communal cards
   owner_type VARCHAR NOT NULL,

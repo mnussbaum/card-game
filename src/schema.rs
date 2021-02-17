@@ -4,8 +4,11 @@ table! {
 
     card_groups (id) {
         id -> Int4,
-        name -> Varchar,
         created_at -> Timestamp,
+        name -> Varchar,
+        initial_size -> Int4,
+        layout -> Card_group_enum_layout,
+        visibility -> Card_group_enum_visibility,
         owner_type -> Varchar,
         owner_id -> Int4,
     }

@@ -1,11 +1,12 @@
 use std::fmt;
 
+use chrono::NaiveDateTime;
 use diesel::Queryable;
 use diesel_derive_enum::DbEnum;
 use juniper::{GraphQLEnum, GraphQLObject};
 use serde::Serialize;
 
-use crate::schema::cards;
+use crate::schema::{card_groups, card_groups_cards, cards};
 
 #[derive(Debug, PartialEq, DbEnum, GraphQLEnum, Serialize)]
 #[DieselType = "Card_enum_suit"]
@@ -46,7 +47,6 @@ pub enum Color {
 }
 
 #[derive(GraphQLObject, Serialize, Identifiable, Queryable)]
-#[table_name = "cards"]
 pub struct Card {
     pub id: i32,
     pub rank_numeric: Option<i32>,
@@ -68,4 +68,48 @@ impl fmt::Display for Card {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.unicode_char)
     }
+}
+
+#[derive(Clone, Debug, PartialEq, DbEnum, GraphQLEnum, Serialize)]
+#[DieselType = "Card_group_enum_layout"]
+#[PgType = "card_grou_enum_layout"]
+pub enum CardGroupLayout {
+    Pile,
+    Spread,
+}
+
+#[derive(Clone, Debug, PartialEq, DbEnum, GraphQLEnum, Serialize)]
+#[DieselType = "Card_group_enum_visibility"]
+#[PgType = "card_grou_enum_visibility"]
+pub enum CardGroupVisibility {
+    FaceDown,
+    FaceUp,
+    TopFaceUpRestFaceDown,
+    VisibleToOwner,
+}
+
+#[derive(GraphQLObject, Serialize, Identifiable, Queryable)]
+pub struct CardGroup {
+    pub id: i32,
+    pub created_at: NaiveDateTime,
+    pub name: String,
+    pub initial_size: i32,
+    pub layout: CardGroupLayout,
+    pub visibility: CardGroupVisibility,
+
+    // The owner of a card group is either a user or a game in the case of
+    // communal cards
+    pub owner_type: String,
+    pub owner_id: i32,
+}
+
+#[derive(GraphQLObject, Serialize, Identifiable, Queryable, Associations)]
+#[belongs_to(CardGroup)]
+#[belongs_to(Card)]
+#[table_name = "card_groups_cards"]
+pub struct CardGroupCards {
+    pub id: i32,
+    pub created_at: NaiveDateTime,
+    pub card_id: i32,
+    pub card_group_id: i32,
 }
