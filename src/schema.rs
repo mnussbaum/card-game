@@ -2,6 +2,31 @@ table! {
     use diesel::sql_types::*;
     use crate::deck::models::*;
 
+    card_groups (id) {
+        id -> Int4,
+        name -> Varchar,
+        created_at -> Timestamp,
+        owner_type -> Varchar,
+        owner_id -> Int4,
+    }
+}
+
+table! {
+    use diesel::sql_types::*;
+    use crate::deck::models::*;
+
+    card_groups_cards (id) {
+        id -> Int4,
+        created_at -> Timestamp,
+        card_id -> Int4,
+        card_group_id -> Int4,
+    }
+}
+
+table! {
+    use diesel::sql_types::*;
+    use crate::deck::models::*;
+
     cards (id) {
         id -> Int4,
         rank_numeric -> Nullable<Int4>,
@@ -50,10 +75,14 @@ table! {
     }
 }
 
+joinable!(card_groups_cards -> card_groups (card_group_id));
+joinable!(card_groups_cards -> cards (card_id));
 joinable!(games_users -> games (game_id));
 joinable!(games_users -> users (user_id));
 
 allow_tables_to_appear_in_same_query!(
+    card_groups,
+    card_groups_cards,
     cards,
     games,
     games_users,
