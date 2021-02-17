@@ -25,7 +25,7 @@ pub struct InsertableUser {
 }
 
 #[derive(Debug, Deserialize, juniper::GraphQLInputObject)]
-pub struct UserData {
+pub struct CreateUserInput {
     pub email: String,
     pub password: String,
 }
@@ -46,9 +46,9 @@ impl From<SlimUser> for LoggedInUser {
     }
 }
 
-impl From<UserData> for InsertableUser {
-    fn from(user_data: UserData) -> Self {
-        let UserData {
+impl From<CreateUserInput> for InsertableUser {
+    fn from(user_data: CreateUserInput) -> Self {
+        let CreateUserInput {
             email, password, ..
         } = user_data;
 

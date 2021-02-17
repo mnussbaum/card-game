@@ -2,10 +2,10 @@ use actix_web::web;
 use diesel::prelude::*;
 
 use crate::errors::ServiceResult;
-use crate::user::model::{InsertableUser, SlimUser, User, UserData};
+use crate::user::model::{CreateUserInput, InsertableUser, SlimUser, User};
 
 pub fn register(
-    user_data: UserData,
+    user_data: CreateUserInput,
     db_pool: web::Data<crate::db::Pool>,
 ) -> ServiceResult<SlimUser> {
     let connection = &db_pool.get()?;
@@ -13,7 +13,10 @@ pub fn register(
     create_user(user_data, connection)
 }
 
-pub fn create_user(user_data: UserData, connection: &PgConnection) -> ServiceResult<SlimUser> {
+pub fn create_user(
+    user_data: CreateUserInput,
+    connection: &PgConnection,
+) -> ServiceResult<SlimUser> {
     use crate::schema::users::dsl::users;
 
     let user: InsertableUser = user_data.into();

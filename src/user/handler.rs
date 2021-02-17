@@ -4,7 +4,7 @@ use actix_web::{web, Error, FromRequest, HttpRequest, HttpResponse};
 
 use crate::db::Pool;
 use crate::errors::ServiceError;
-use crate::user::model::{LoggedInUser, SlimUser, UserData};
+use crate::user::model::{CreateUserInput, LoggedInUser, SlimUser};
 use crate::user::service as user;
 use serde::Deserialize;
 
@@ -30,7 +30,7 @@ impl FromRequest for LoggedInUser {
 }
 
 pub async fn register(
-    user_data: web::Form<UserData>,
+    user_data: web::Form<CreateUserInput>,
     pool: web::Data<Pool>,
 ) -> Result<HttpResponse, ServiceError> {
     user::register(user_data.into_inner(), pool)

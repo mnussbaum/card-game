@@ -1,29 +1,48 @@
 use std::sync::Arc;
 
+use diesel::RunQueryDsl;
 use juniper::{graphql_object, RootNode};
 use juniper::{EmptySubscription, FieldResult};
-use log::error;
 
 use crate::db::Pool;
 use crate::errors::ServiceError;
-use crate::models::{Game, NewGame};
-use crate::user::model::LoggedInUser;
+use crate::models::{Game, NewGame, NewGameUser};
+use crate::schema;
+use crate::user::model::{LoggedInUser, SlimUser};
 
 #[derive(Clone)]
-pub struct Context {
+pub struct Context<'a> {
+    // The phantom data allows the use of a lifetime param. The lifetime param
+    // allows authenticated_user to return a pointer to context data with a
+    // context-scoped lifetime
+    marker: std::marker::PhantomData<&'a ()>,
+
     pub db_pool: Arc<Pool>,
     pub user: LoggedInUser,
 }
 
-impl juniper::Context for Context {}
+impl<'a> juniper::Context for Context<'a> {}
 
-pub struct QueryRoot;
+impl<'a> Context<'a> {
+    pub fn authenticated_user(&'a self) -> Result<&'a SlimUser, ServiceError> {
+        if let Some(logged_in_user) = &self.user.0 {
+            return Ok(logged_in_user);
+        }
+
+        Err(ServiceError::Unauthorized)
+    }
+}
+
+pub struct QueryRoot<'a> {
+    marker: std::marker::PhantomData<&'a ()>,
+}
 
 // TODO: START HERE:
 // * Create new game
 // * Only allow users to view games they're in
 // * When users request a game also give them their available actions
 // * Only let users see cards they have perms for
+// * Move user CRUD into graphql and out of REST
 // * Consolidate error handling
 // * Add CSRF protection
 // * Do I need to use blocking indicators around DB queries?
@@ -40,49 +59,80 @@ pub struct QueryRoot;
 // * Use websockets
 // * Use something like Apollo on the front end to receive game state
 
-#[graphql_object(context = Context)]
-impl QueryRoot {
+#[graphql_object(context = Context<'a>)]
+impl<'a> QueryRoot<'a> {
     #[graphql(description = "Query for games")]
-    fn games(context: &Context, id: Option<i32>) -> FieldResult<Vec<Game>> {
+    fn games(context: &Context<'a>, id: Option<i32>) -> FieldResult<Vec<Game>> {
         let connection = &context.db_pool.get()?;
+        let user = context.authenticated_user()?;
 
-        if let Some(logged_in_user) = &context.user.0 {
-            if let Some(id) = id {
-                Ok(Game::find_by_user_and_id(connection, logged_in_user, id)?)
-            } else {
-                Ok(Game::belongs_to_user(connection, logged_in_user)?)
-            }
+        if let Some(id) = id {
+            Ok(Game::find_by_user_and_id(connection, user, id)?)
         } else {
-            error!("Reached a game query without a logged in user");
-            return Err(ServiceError::InternalServerError)?;
+            Ok(Game::belonging_to_user(connection, user)?)
         }
     }
 }
 
-pub struct MutationRoot;
+pub struct MutationRoot<'a> {
+    marker: std::marker::PhantomData<&'a ()>,
+}
 
-#[graphql_object(context = Context)]
-impl MutationRoot {
-    #[graphql(description = "Add player to game")]
-    fn update_game(context: &Context, data: NewGame) -> FieldResult<Game> {
-        // let connection = &context.db_pool.get()?;
-        //
-        // let game: Game = diesel::insert_into(games::table)
-        //     .values(&data)
-        //     .get_result(connection)
-        //     .expect("Error saving game");
-        //
-        // Ok(game)
-        panic!("boom")
+#[graphql_object(context = Context<'a>)]
+impl<'a> MutationRoot<'a> {
+    #[graphql(description = "Create a new game")]
+    fn create_game(context: &Context<'a>) -> FieldResult<Game> {
+        let new_game = NewGame {
+            player_turn_index: 0,
+        };
+
+        let game: Game = diesel::insert_into(schema::games::table)
+            .values(&new_game)
+            .get_result(&context.db_pool.get()?)?;
+
+        Ok(game)
+    }
+
+    #[graphql(description = "Add a player to game")]
+    fn join_game(context: &Context<'a>, game_id: i32) -> FieldResult<Game> {
+        let user = context.authenticated_user()?;
+        let connection = &context.db_pool.get()?;
+        let game = Game::find_by_id(connection, game_id)?;
+
+        diesel::insert_into(schema::games_users::table)
+            .values(NewGameUser {
+                game_id,
+                user_id: user.id,
+            })
+            .execute(connection)?;
+
+        Ok(game)
     }
 }
 
-pub type SchemaGraphQL = RootNode<'static, QueryRoot, MutationRoot, EmptySubscription<Context>>;
+pub type SchemaGraphQL = RootNode<
+    'static,
+    QueryRoot<'static>,
+    MutationRoot<'static>,
+    EmptySubscription<Context<'static>>,
+>;
 
 pub fn create_graphql_schema() -> SchemaGraphQL {
-    SchemaGraphQL::new(QueryRoot {}, MutationRoot {}, EmptySubscription::new())
+    SchemaGraphQL::new(
+        QueryRoot {
+            marker: std::marker::PhantomData,
+        },
+        MutationRoot {
+            marker: std::marker::PhantomData,
+        },
+        EmptySubscription::new(),
+    )
 }
 
-pub fn create_graphql_context(user: LoggedInUser, db_pool: Arc<Pool>) -> Context {
-    Context { user, db_pool }
+pub fn create_graphql_context<'a>(user: LoggedInUser, db_pool: Arc<Pool>) -> Context<'a> {
+    Context {
+        db_pool,
+        marker: std::marker::PhantomData,
+        user,
+    }
 }

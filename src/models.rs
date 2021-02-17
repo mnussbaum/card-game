@@ -19,6 +19,16 @@ pub struct Game {
 }
 
 impl Game {
+    pub fn find_by_id(
+        connection: &PooledConnection,
+        id: i32,
+    ) -> Result<Game, diesel::result::Error> {
+        games::table
+            .select(games::all_columns)
+            .find(id)
+            .first(connection)
+    }
+
     pub fn find_by_user_and_id(
         connection: &PooledConnection,
         user: &SlimUser,
@@ -32,7 +42,7 @@ impl Game {
             .load::<Game>(connection)
     }
 
-    pub fn belongs_to_user(
+    pub fn belonging_to_user(
         connection: &PooledConnection,
         user: &SlimUser,
     ) -> Result<Vec<Game>, diesel::result::Error> {
