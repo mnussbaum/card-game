@@ -5,7 +5,7 @@ use juniper::{EmptySubscription, FieldResult};
 
 use crate::db::Pool;
 use crate::errors::ServiceError;
-use crate::models::Game;
+use crate::game::model::Game;
 use crate::user::model::{LoggedInUser, SlimUser};
 
 #[derive(Clone)]
@@ -36,8 +36,6 @@ pub struct QueryRoot<'a> {
 }
 
 // TODO: START HERE:
-// * Create new game
-// * Only allow users to view games they're in
 // * When users request a game also give them their available actions
 // * Only let users see cards they have perms for
 // * Move user CRUD into graphql and out of REST

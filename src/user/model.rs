@@ -1,7 +1,7 @@
 use ::serde::{Deserialize, Serialize};
 use chrono::NaiveDateTime;
 
-use crate::schema::*;
+use crate::schema::users;
 use crate::user::util::{make_hash, make_salt};
 
 #[derive(Debug, Serialize, Deserialize, Queryable, juniper::GraphQLObject)]

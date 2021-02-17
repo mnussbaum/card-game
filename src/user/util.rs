@@ -1,6 +1,6 @@
 use argon2rs::argon2i_simple;
 
-use super::model::User;
+use crate::user::model::User;
 
 pub fn make_salt() -> String {
     use rand::Rng;

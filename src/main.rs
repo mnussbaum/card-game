@@ -5,6 +5,7 @@ extern crate diesel;
 
 pub mod db;
 pub mod errors;
+mod game;
 pub mod graphql;
 pub mod models;
 pub mod route_handlers;
