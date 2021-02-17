@@ -44,14 +44,14 @@ CREATE TYPE card_enum_rank
 
 
 CREATE TABLE cards (
-    id             integer
-  , rank_numeric   integer
+    id             INTEGER
+  , rank_numeric   INTEGER
   , rank_text      card_enum_rank
-  , rank_symbol    char(2)
-  , suit_symbol    char(1)
+  , rank_symbol    CHAR(2)
+  , suit_symbol    CHAR(1)
   , suit_text      card_enum_suit
   , suit_color     card_enum_color
-  , unicode_char   char(1)             NOT NULL UNIQUE
+  , unicode_char   CHAR(1)             NOT NULL UNIQUE
 
   , PRIMARY KEY (id)
   , CONSTRAINT card_id_range
