@@ -36,6 +36,7 @@ pub struct QueryRoot<'a> {
 }
 
 // TODO: START HERE:
+// * Migrate game state into models and API
 // * When users request a game also give them their available actions
 // * Only let users see cards they have perms for
 // * Move user CRUD into graphql and out of REST

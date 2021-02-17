@@ -4,6 +4,7 @@
 extern crate diesel;
 
 pub mod db;
+mod deck;
 pub mod errors;
 mod game;
 pub mod graphql;
