@@ -23,3 +23,6 @@ pub struct NewGameUser {
     pub game_id: i32,
     pub user_id: i32,
 }
+
+#[derive(Queryable)]
+pub struct UserAndGameUser(pub User, pub GameUser);

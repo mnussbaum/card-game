@@ -36,18 +36,11 @@ pub struct QueryRoot<'a> {
 }
 
 // TODO: START HERE:
-// * It looks like I can't share models directly between juniper and diesel
-//   * All fields on diesel models need to be DB columns
-//   * I need to add a players() method to the juniper game model
-//   * I can't access the DB to fetch players in the Game model if I can't add
-//     any new fields onto the Game model. Needed for either a connection or a
-//     phantom data marker to accept a graphql context
-//   * So start pulling these models apart
-//   * After you can return players as part of games then add card groups to
-//     the player's fields
-//   * Then test the polymorphic situation on card groups to assert the deck
-//     and other communaly owned card groups can be queried and serialized onto
-//     games
+// * After you can return players as part of games then add card groups to
+//   the player's fields
+// * Then test the polymorphic situation on card groups to assert the deck
+//   and other communaly owned card groups can be queried and serialized onto
+//   games
 //
 // * Migrate game state into models and API
 // * When users request a game also give them their available actions
