@@ -5,7 +5,7 @@ use juniper::{EmptySubscription, FieldResult};
 
 use crate::db::Pool;
 use crate::errors::ServiceError;
-use crate::game::model::Game;
+use crate::game::{graphql::Game, record::GameRecord};
 use crate::user::model::{LoggedInUser, SlimUser};
 
 #[derive(Clone)]
@@ -36,6 +36,19 @@ pub struct QueryRoot<'a> {
 }
 
 // TODO: START HERE:
+// * It looks like I can't share models directly between juniper and diesel
+//   * All fields on diesel models need to be DB columns
+//   * I need to add a players() method to the juniper game model
+//   * I can't access the DB to fetch players in the Game model if I can't add
+//     any new fields onto the Game model. Needed for either a connection or a
+//     phantom data marker to accept a graphql context
+//   * So start pulling these models apart
+//   * After you can return players as part of games then add card groups to
+//     the player's fields
+//   * Then test the polymorphic situation on card groups to assert the deck
+//     and other communaly owned card groups can be queried and serialized onto
+//     games
+//
 // * Migrate game state into models and API
 // * When users request a game also give them their available actions
 // * Only let users see cards they have perms for
@@ -63,11 +76,13 @@ impl<'a> QueryRoot<'a> {
         let connection = &context.db_pool.get()?;
         let user = context.authenticated_user()?;
 
-        if let Some(id) = id {
-            Ok(Game::find_by_user_and_id(connection, user, id)?)
+        let game_records = if let Some(id) = id {
+            GameRecord::find_by_user_and_id(connection, user, id)?
         } else {
-            Ok(Game::belonging_to_user(connection, user)?)
-        }
+            GameRecord::belonging_to_user(connection, user)?
+        };
+
+        Ok(game_records.into_iter().map(|g| g.into()).collect())
     }
 }
 
@@ -79,18 +94,18 @@ pub struct MutationRoot<'a> {
 impl<'a> MutationRoot<'a> {
     #[graphql(description = "Create a new game")]
     fn create_game(context: &Context<'a>) -> FieldResult<Game> {
-        Ok(Game::create(&context.db_pool.get()?)?)
+        Ok(GameRecord::create(&context.db_pool.get()?)?.into())
     }
 
     #[graphql(description = "Add a player to game")]
     fn join_game(context: &Context<'a>, game_id: i32) -> FieldResult<Game> {
         let user = context.authenticated_user()?;
         let connection = &context.db_pool.get()?;
-        let game = Game::find_by_id(connection, game_id)?;
+        let game = GameRecord::find_by_id(connection, game_id)?;
 
         game.join(connection, user)?;
 
-        Ok(game)
+        Ok(game.into())
     }
 }
 

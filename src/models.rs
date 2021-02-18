@@ -2,12 +2,12 @@ use chrono::NaiveDateTime;
 
 use diesel::{Insertable, Queryable};
 
-use crate::game::model::Game;
+use crate::game::record::GameRecord;
 use crate::schema::games_users;
 use crate::user::model::User;
 
 #[derive(Identifiable, Queryable, Associations)]
-#[belongs_to(Game)]
+#[belongs_to(GameRecord, foreign_key = "game_id")]
 #[belongs_to(User)]
 #[table_name = "games_users"]
 pub struct GameUser {

@@ -1,34 +1,39 @@
 use chrono::NaiveDateTime;
+use juniper::GraphQLInputObject;
 
 use diesel::prelude::*;
 use diesel::{Insertable, Queryable};
 
-use juniper::{GraphQLInputObject, GraphQLObject};
 use serde::{Deserialize, Serialize};
 
 use crate::db::PooledConnection;
 use crate::errors::ServiceResult;
 use crate::models::NewGameUser;
 use crate::schema::{games, games_users, users};
-use crate::user::model::SlimUser;
+use crate::user::model::{SlimUser, User};
 
-#[derive(GraphQLObject, Identifiable, Queryable, Associations, Serialize)]
-#[graphql(description = "A game")]
-pub struct Game {
+#[derive(Identifiable, Queryable, Associations, Serialize)]
+#[table_name = "games"]
+pub struct GameRecord {
     pub id: i32,
     pub player_turn_index: i32,
     pub created_at: NaiveDateTime,
 }
 
-impl Game {
-    pub fn find_by_id(
-        connection: &PooledConnection,
-        id: i32,
-    ) -> Result<Game, diesel::result::Error> {
-        games::table
+impl GameRecord {
+    pub fn users_by_game_id(connection: &PooledConnection, id: i32) -> ServiceResult<Vec<User>> {
+        Ok(users::table
+            .inner_join(games_users::table.inner_join(games::table))
+            .filter(games::id.eq(id))
+            .select(users::all_columns)
+            .load::<User>(connection)?)
+    }
+
+    pub fn find_by_id(connection: &PooledConnection, id: i32) -> ServiceResult<GameRecord> {
+        Ok(games::table
             .select(games::all_columns)
             .find(id)
-            .first(connection)
+            .first(connection)?)
     }
 
     pub fn find_by_user_and_id(
