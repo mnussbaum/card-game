@@ -8,9 +8,9 @@ use serde::Deserialize;
 
 use crate::db::PooledConnection;
 use crate::errors::ServiceResult;
-use crate::models::{GameAndGameUserAndUser, NewGameUser};
+use crate::models::NewGameUser;
 use crate::schema::{games, games_users, users};
-use crate::user::model::SlimUser;
+use crate::user::model::{SlimUser, User};
 
 #[derive(Identifiable, Queryable, Associations)]
 #[table_name = "games"]
@@ -21,19 +21,16 @@ pub struct GameRecord {
 }
 
 impl<'a> GameRecord {
-    pub fn game_and_game_users_and_users_by_game(
+    pub fn find_users_by_game(
         connection: &PooledConnection,
         game: &'a GameRecord,
-    ) -> ServiceResult<Vec<GameAndGameUserAndUser<'a>>> {
+    ) -> ServiceResult<Vec<User>> {
         Ok(users::table
             .inner_join(games_users::table.inner_join(games::table))
             .filter(games::id.eq(game.id))
-            .select((games_users::all_columns, users::all_columns))
+            .select(users::all_columns)
             .order(games_users::id)
-            .get_results(connection)?
-            .into_iter()
-            .map(|(game_user, user)| (game, game_user, user).into())
-            .collect::<Vec<GameAndGameUserAndUser>>())
+            .get_results(connection)?)
     }
 
     pub fn find_by_id(connection: &PooledConnection, id: i32) -> ServiceResult<GameRecord> {

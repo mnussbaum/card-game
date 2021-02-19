@@ -20,12 +20,12 @@ impl<'a> Game<'a> {
 
     fn players(&self, context: &Context<'a>) -> FieldResult<Vec<Player>> {
         let connection = &context.db_pool.get()?;
-        Ok(
-            GameRecord::game_and_game_users_and_users_by_game(connection, &self.record)?
-                .into_iter()
-                .map(|user_and_game_user| user_and_game_user.into())
-                .collect(),
-        )
+        let users = GameRecord::find_users_by_game(connection, &self.record)?;
+
+        Ok(users
+            .into_iter()
+            .map(|user| (&self.record, user).into())
+            .collect::<Vec<Player>>())
     }
 
     fn player_turn_index(&self) -> i32 {

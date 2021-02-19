@@ -121,13 +121,13 @@ pub struct CardGroupRecord {
 }
 
 impl CardGroupRecord {
-    pub fn find_by_game_and_user(
+    pub fn find_by_game_record_and_user(
         connection: &PooledConnection,
-        game: &GameRecord,
+        game_record: &GameRecord,
         user: &User,
     ) -> ServiceResult<Vec<Self>> {
         Ok(card_groups::table
-            .filter(card_groups::game_id.eq(game.id))
+            .filter(card_groups::game_id.eq(game_record.id))
             .filter(card_groups::user_id.eq(user.id))
             .select(card_groups::all_columns)
             .load::<Self>(connection)?)

@@ -5,20 +5,18 @@ use juniper::{graphql_object, FieldResult};
 use crate::deck::graphql::CardGroup;
 use crate::game::record::GameRecord;
 use crate::graphql::Context;
-use crate::models::{GameAndGameUserAndUser, GameUser};
 use crate::user::model::User;
 
 pub struct Player<'a> {
+    game_record: &'a GameRecord,
     user: User,
-    game_user: GameUser,
-    game: &'a GameRecord,
 }
 
 #[graphql_object(context = Context<'a>)]
 #[graphql(description = "A game player")]
 impl<'a> Player<'a> {
     fn id(&self) -> i32 {
-        self.game_user.id
+        self.user.id
     }
 
     fn email(&self) -> &str {
@@ -26,18 +24,19 @@ impl<'a> Player<'a> {
     }
 
     fn card_groups(&self, context: &Context<'a>) -> FieldResult<Vec<CardGroup>> {
-        Ok(CardGroup::find_by_game_and_user(
-            context, self.game, &self.user,
+        Ok(CardGroup::find_by_game_record_and_user(
+            context,
+            self.game_record,
+            &self.user,
         )?)
     }
 }
 
-impl<'a> From<GameAndGameUserAndUser<'a>> for Player<'a> {
-    fn from(game_and_game_user_and_game: GameAndGameUserAndUser<'a>) -> Player<'a> {
+impl<'a> From<(&'a GameRecord, User)> for Player<'a> {
+    fn from(game_record_and_user: (&'a GameRecord, User)) -> Player<'a> {
         Player {
-            game: game_and_game_user_and_game.game,
-            game_user: game_and_game_user_and_game.game_user,
-            user: game_and_game_user_and_game.user,
+            game_record: game_record_and_user.0,
+            user: game_record_and_user.1,
         }
     }
 }

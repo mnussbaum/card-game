@@ -14,14 +14,14 @@ pub struct CardGroup<'a> {
 }
 
 impl<'a> CardGroup<'a> {
-    pub fn find_by_game_and_user(
+    pub fn find_by_game_record_and_user(
         context: &Context<'a>,
-        game: &GameRecord,
+        game_record: &GameRecord,
         user: &User,
     ) -> ServiceResult<Vec<CardGroup<'a>>> {
         let connection = &context.db_pool.get()?;
         Ok(
-            CardGroupRecord::find_by_game_and_user(connection, game, user)?
+            CardGroupRecord::find_by_game_record_and_user(connection, game_record, user)?
                 .into_iter()
                 .map(|record| record.into())
                 .collect(),
