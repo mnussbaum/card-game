@@ -2,15 +2,16 @@ use std::convert::From;
 
 use juniper::{graphql_object, FieldResult};
 
-use crate::deck::models::CardGroup;
+use crate::deck::graphql::CardGroup;
+use crate::game::record::GameRecord;
 use crate::graphql::Context;
-use crate::models::{GameUser, UserAndGameUser};
+use crate::models::{GameAndGameUserAndUser, GameUser};
 use crate::user::model::User;
 
 pub struct Player<'a> {
-    marker: std::marker::PhantomData<&'a ()>,
     user: User,
     game_user: GameUser,
+    game: &'a GameRecord,
 }
 
 #[graphql_object(context = Context<'a>)]
@@ -25,17 +26,18 @@ impl<'a> Player<'a> {
     }
 
     fn card_groups(&self, context: &Context<'a>) -> FieldResult<Vec<CardGroup>> {
-        let connection = &context.db_pool.get()?;
-        Ok(CardGroup::belonging_to_user(connection, &self.user)?)
+        Ok(CardGroup::find_by_game_and_user(
+            context, self.game, &self.user,
+        )?)
     }
 }
 
-impl<'a> From<UserAndGameUser> for Player<'a> {
-    fn from(user_and_game_user: UserAndGameUser) -> Player<'a> {
-        return Player {
-            marker: std::marker::PhantomData,
-            user: user_and_game_user.0,
-            game_user: user_and_game_user.1,
-        };
+impl<'a> From<GameAndGameUserAndUser<'a>> for Player<'a> {
+    fn from(game_and_game_user_and_game: GameAndGameUserAndUser<'a>) -> Player<'a> {
+        Player {
+            game: game_and_game_user_and_game.game,
+            game_user: game_and_game_user_and_game.game_user,
+            user: game_and_game_user_and_game.user,
+        }
     }
 }

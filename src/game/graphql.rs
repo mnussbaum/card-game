@@ -21,7 +21,7 @@ impl<'a> Game<'a> {
     fn players(&self, context: &Context<'a>) -> FieldResult<Vec<Player>> {
         let connection = &context.db_pool.get()?;
         Ok(
-            GameRecord::user_and_game_users_by_game_id(connection, self.record.id)?
+            GameRecord::game_and_game_users_and_users_by_game(connection, &self.record)?
                 .into_iter()
                 .map(|user_and_game_user| user_and_game_user.into())
                 .collect(),

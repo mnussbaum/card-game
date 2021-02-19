@@ -1,6 +1,6 @@
 table! {
     use diesel::sql_types::*;
-    use crate::deck::models::*;
+    use crate::deck::records::*;
 
     card_groups (id) {
         id -> Int4,
@@ -9,14 +9,14 @@ table! {
         initial_size -> Int4,
         layout -> Card_group_enum_layout,
         visibility -> Card_group_enum_visibility,
-        owner_type -> Varchar,
-        owner_id -> Int4,
+        user_id -> Nullable<Int4>,
+        game_id -> Int4,
     }
 }
 
 table! {
     use diesel::sql_types::*;
-    use crate::deck::models::*;
+    use crate::deck::records::*;
 
     card_groups_cards (id) {
         id -> Int4,
@@ -28,7 +28,7 @@ table! {
 
 table! {
     use diesel::sql_types::*;
-    use crate::deck::models::*;
+    use crate::deck::records::*;
 
     cards (id) {
         id -> Int4,
@@ -44,7 +44,7 @@ table! {
 
 table! {
     use diesel::sql_types::*;
-    use crate::deck::models::*;
+    use crate::deck::records::*;
 
     games (id) {
         id -> Int4,
@@ -55,7 +55,7 @@ table! {
 
 table! {
     use diesel::sql_types::*;
-    use crate::deck::models::*;
+    use crate::deck::records::*;
 
     games_users (id) {
         id -> Int4,
@@ -67,7 +67,7 @@ table! {
 
 table! {
     use diesel::sql_types::*;
-    use crate::deck::models::*;
+    use crate::deck::records::*;
 
     users (id) {
         id -> Int4,
@@ -78,6 +78,7 @@ table! {
     }
 }
 
+joinable!(card_groups -> games (game_id));
 joinable!(card_groups_cards -> card_groups (card_group_id));
 joinable!(card_groups_cards -> cards (card_id));
 joinable!(games_users -> games (game_id));

@@ -11,13 +11,11 @@ CREATE TABLE card_groups (
   initial_size INTEGER NOT NULL,
   layout card_group_enum_layout NOT NULL,
   visibility card_group_enum_visibility NOT NULL,
-
-  -- The owner of a card group is either a user or a game in the case of communal cards
-  owner_type VARCHAR NOT NULL,
-  owner_id INTEGER NOT NULL
+  user_id INTEGER,
+  game_id INTEGER REFERENCES games NOT NULL
 );
 
-CREATE INDEX card_groups__owner_type__owner_id_idx ON card_groups(owner_type, owner_id);
+CREATE INDEX card_groups__game_id ON card_groups(game_id);
 
 CREATE TABLE card_groups_cards (
   id SERIAL PRIMARY KEY,
