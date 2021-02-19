@@ -36,12 +36,6 @@ pub struct QueryRoot<'a> {
 }
 
 // TODO: START HERE:
-// * After you can return players as part of games then add card groups to
-//   the player's fields
-// * Then test the polymorphic situation on card groups to assert the deck
-//   and other communaly owned card groups can be queried and serialized onto
-//   games
-//
 // * Migrate game state into models and API
 // * When users request a game also give them their available actions
 // * Only let users see cards they have perms for

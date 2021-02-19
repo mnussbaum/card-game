@@ -8,7 +8,6 @@ mod deck;
 pub mod errors;
 mod game;
 pub mod graphql;
-pub mod models;
 pub mod player;
 pub mod route_handlers;
 pub mod schema;

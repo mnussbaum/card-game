@@ -8,7 +8,6 @@ use serde::Deserialize;
 
 use crate::db::PooledConnection;
 use crate::errors::ServiceResult;
-use crate::models::NewGameUser;
 use crate::schema::{games, games_users, users};
 use crate::user::model::{SlimUser, User};
 
@@ -92,4 +91,22 @@ impl<'a> GameRecord {
 #[graphql(description = "New game")]
 pub struct NewGame {
     pub player_turn_index: i32,
+}
+
+#[derive(Identifiable, Queryable, Associations)]
+#[belongs_to(GameRecord, foreign_key = "game_id")]
+#[belongs_to(User)]
+#[table_name = "games_users"]
+pub struct GameUser {
+    pub id: i32,
+    pub game_id: i32,
+    pub user_id: i32,
+    pub created_at: NaiveDateTime,
+}
+
+#[derive(Insertable)]
+#[table_name = "games_users"]
+pub struct NewGameUser {
+    pub game_id: i32,
+    pub user_id: i32,
 }
