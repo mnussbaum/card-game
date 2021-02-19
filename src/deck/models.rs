@@ -1,12 +1,16 @@
 use std::fmt;
 
 use chrono::NaiveDateTime;
+use diesel::prelude::*;
 use diesel::Queryable;
 use diesel_derive_enum::DbEnum;
 use juniper::{GraphQLEnum, GraphQLObject};
 use serde::Serialize;
 
+use crate::db::PooledConnection;
+use crate::errors::ServiceResult;
 use crate::schema::{card_groups, card_groups_cards, cards};
+use crate::user::model::User;
 
 #[derive(Debug, PartialEq, DbEnum, GraphQLEnum, Serialize)]
 #[DieselType = "Card_enum_suit"]
@@ -101,6 +105,19 @@ pub struct CardGroup {
     // communal cards
     pub owner_type: String,
     pub owner_id: i32,
+}
+
+impl CardGroup {
+    pub fn belonging_to_user(
+        connection: &PooledConnection,
+        user: &User,
+    ) -> ServiceResult<Vec<Self>> {
+        Ok(card_groups::table
+            .filter(card_groups::owner_type.eq("user"))
+            .filter(card_groups::owner_id.eq(user.id))
+            .select(card_groups::all_columns)
+            .load::<Self>(connection)?)
+    }
 }
 
 #[derive(GraphQLObject, Serialize, Identifiable, Queryable, Associations)]

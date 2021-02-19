@@ -1,9 +1,11 @@
-use juniper::graphql_object;
+use std::convert::From;
 
+use juniper::{graphql_object, FieldResult};
+
+use crate::deck::models::CardGroup;
 use crate::graphql::Context;
 use crate::models::{GameUser, UserAndGameUser};
 use crate::user::model::User;
-use std::convert::From;
 
 pub struct Player<'a> {
     marker: std::marker::PhantomData<&'a ()>,
@@ -20,6 +22,11 @@ impl<'a> Player<'a> {
 
     fn email(&self) -> &str {
         &self.user.email
+    }
+
+    fn card_groups(&self, context: &Context<'a>) -> FieldResult<Vec<CardGroup>> {
+        let connection = &context.db_pool.get()?;
+        Ok(CardGroup::belonging_to_user(connection, &self.user)?)
     }
 }
 
