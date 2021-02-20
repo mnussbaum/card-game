@@ -13,7 +13,7 @@ use crate::game::record::GameRecord;
 use crate::schema::{card_groups, card_groups_cards, cards};
 use crate::user::model::User;
 
-#[derive(Debug, PartialEq, DbEnum, GraphQLEnum, Serialize)]
+#[derive(Clone, Debug, PartialEq, DbEnum, GraphQLEnum, Serialize)]
 #[DieselType = "Card_enum_suit"]
 #[PgType = "card_enum_suit"]
 pub enum Suit {
@@ -23,7 +23,7 @@ pub enum Suit {
     Spades,
 }
 
-#[derive(Debug, PartialEq, DbEnum, GraphQLEnum, Serialize)]
+#[derive(Clone, Debug, PartialEq, DbEnum, GraphQLEnum, Serialize)]
 #[DieselType = "Card_enum_rank"]
 #[PgType = "card_enum_rank"]
 pub enum Rank {
@@ -43,7 +43,7 @@ pub enum Rank {
     Joker,
 }
 
-#[derive(Debug, PartialEq, DbEnum, GraphQLEnum, Serialize)]
+#[derive(Clone, Debug, PartialEq, DbEnum, GraphQLEnum, Serialize)]
 #[DieselType = "Card_enum_color"]
 #[PgType = "card_enum_color"]
 pub enum Color {
@@ -51,7 +51,7 @@ pub enum Color {
     Red,
 }
 
-#[derive(GraphQLObject, Serialize, Identifiable, Queryable)]
+#[derive(Clone, GraphQLObject, Serialize, Identifiable, Queryable)]
 pub struct Card {
     pub id: i32,
     pub rank_numeric: Option<i32>,
@@ -62,6 +62,8 @@ pub struct Card {
     pub suit_color: Option<Color>,
     pub unicode_char: String,
 }
+
+const COVERED_CARD_ID: i32 = 0;
 
 impl Card {
     pub fn belonging_to_card_group(
@@ -74,6 +76,22 @@ impl Card {
             .select(cards::all_columns)
             .order(card_groups_cards::id)
             .load::<Self>(connection)?)
+    }
+
+    pub fn repeat_covered_card(
+        connection: &PooledConnection,
+        card_count: usize,
+    ) -> ServiceResult<Vec<Self>> {
+        let covered_card = cards::table
+            .find(COVERED_CARD_ID)
+            .select(cards::all_columns)
+            .load::<Self>(connection)?
+            .pop()
+            .expect("Couldn't find covered card in DB");
+
+        Ok(std::iter::repeat(covered_card)
+            .take(card_count)
+            .collect::<Vec<Self>>())
     }
 }
 
@@ -107,7 +125,7 @@ pub enum CardGroupVisibility {
     VisibleToOwner,
 }
 
-#[derive(Identifiable, Queryable, Associations)]
+#[derive(Clone, Identifiable, Queryable, Associations)]
 #[table_name = "card_groups"]
 pub struct CardGroupRecord {
     pub id: i32,

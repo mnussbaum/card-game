@@ -44,17 +44,44 @@ impl<'a> CardGroup<'a> {
         self.record.initial_size
     }
 
-    fn visibility(&self) -> &CardGroupVisibility {
-        &self.record.visibility
-    }
-
     fn layout(&self) -> &CardGroupLayout {
         &self.record.layout
     }
 
     fn cards(&self, context: &Context<'a>) -> FieldResult<Vec<Card>> {
         let connection = &context.db_pool.get()?;
-        Ok(Card::belonging_to_card_group(connection, &self.record)?)
+        let mut cards = Card::belonging_to_card_group(connection, &self.record)?;
+
+        match self.record.visibility {
+            CardGroupVisibility::FaceUp => Ok(cards),
+
+            CardGroupVisibility::FaceDown => {
+                Ok(Card::repeat_covered_card(connection, cards.len())?)
+            }
+
+            CardGroupVisibility::TopFaceUpRestFaceDown => {
+                if cards.len() <= 0 {
+                    return Ok(cards);
+                }
+
+                let top_card = cards.remove(0);
+                let mut covered_cards = Card::repeat_covered_card(connection, cards.len())?;
+                covered_cards.insert(0, top_card);
+
+                Ok(covered_cards)
+            }
+
+            CardGroupVisibility::VisibleToOwner => {
+                let authenticated_user = context.authenticated_user()?;
+                if let Some(card_group_owner_user_id) = self.record.user_id {
+                    if authenticated_user.id == card_group_owner_user_id {
+                        return Ok(cards);
+                    }
+                }
+
+                Ok(Card::repeat_covered_card(connection, cards.len())?)
+            }
+        }
     }
 }
 
