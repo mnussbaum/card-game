@@ -6,7 +6,7 @@ table! {
         id -> Int4,
         created_at -> Timestamp,
         name -> Varchar,
-        initial_size -> Int4,
+        initial_size -> Nullable<Int4>,
         layout -> Card_group_enum_layout,
         visibility -> Card_group_enum_visibility,
         user_id -> Nullable<Int4>,
@@ -79,6 +79,7 @@ table! {
 }
 
 joinable!(card_groups -> games (game_id));
+joinable!(card_groups -> users (user_id));
 joinable!(card_groups_cards -> card_groups (card_group_id));
 joinable!(card_groups_cards -> cards (card_id));
 joinable!(games_users -> games (game_id));

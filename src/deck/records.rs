@@ -5,7 +5,7 @@ use diesel::prelude::*;
 use diesel::Queryable;
 use diesel_derive_enum::DbEnum;
 use juniper::{GraphQLEnum, GraphQLObject};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::db::PooledConnection;
 use crate::errors::ServiceResult;
@@ -23,7 +23,9 @@ pub enum Suit {
     Spades,
 }
 
-#[derive(Clone, Debug, PartialEq, DbEnum, GraphQLEnum, Serialize)]
+#[derive(
+    Clone, Debug, PartialEq, PartialOrd, Eq, Hash, DbEnum, GraphQLEnum, Deserialize, Serialize,
+)]
 #[DieselType = "Card_enum_rank"]
 #[PgType = "card_enum_rank"]
 pub enum Rank {
@@ -49,6 +51,12 @@ pub enum Rank {
 pub enum Color {
     Black,
     Red,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum CardValue {
+    Wild,
+    Numeric(usize),
 }
 
 #[derive(Clone, GraphQLObject, Serialize, Identifiable, Queryable)]
@@ -107,7 +115,7 @@ impl fmt::Display for Card {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, DbEnum, GraphQLEnum, Serialize)]
+#[derive(Clone, Debug, PartialEq, DbEnum, GraphQLEnum, Deserialize, Serialize)]
 #[DieselType = "Card_group_enum_layout"]
 #[PgType = "card_grou_enum_layout"]
 pub enum CardGroupLayout {
@@ -115,7 +123,7 @@ pub enum CardGroupLayout {
     Spread,
 }
 
-#[derive(Clone, Debug, PartialEq, DbEnum, GraphQLEnum, Serialize)]
+#[derive(Clone, Debug, PartialEq, DbEnum, GraphQLEnum, Deserialize, Serialize)]
 #[DieselType = "Card_group_enum_visibility"]
 #[PgType = "card_grou_enum_visibility"]
 pub enum CardGroupVisibility {
@@ -125,17 +133,27 @@ pub enum CardGroupVisibility {
     VisibleToOwner,
 }
 
-#[derive(Clone, Identifiable, Queryable, Associations)]
+#[derive(Clone, Debug, Identifiable, Queryable, Associations)]
 #[table_name = "card_groups"]
+#[belongs_to(User)]
+#[belongs_to(GameRecord, foreign_key = "game_id")]
 pub struct CardGroupRecord {
     pub id: i32,
     pub created_at: NaiveDateTime,
     pub name: String,
-    pub initial_size: i32,
+    pub initial_size: Option<i32>,
     pub layout: CardGroupLayout,
     pub visibility: CardGroupVisibility,
     pub user_id: Option<i32>,
     pub game_id: i32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct CardGroupDescription {
+    pub name: String,
+    pub initial_size: Option<i32>,
+    pub layout: CardGroupLayout,
+    pub visibility: CardGroupVisibility,
 }
 
 impl CardGroupRecord {
@@ -156,7 +174,7 @@ impl CardGroupRecord {
 #[belongs_to(CardGroupRecord foreign_key = "card_group_id")]
 #[belongs_to(Card)]
 #[table_name = "card_groups_cards"]
-pub struct CardGroupCards {
+pub struct CardGroupCard {
     pub id: i32,
     pub created_at: NaiveDateTime,
     pub card_id: i32,

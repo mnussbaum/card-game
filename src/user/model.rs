@@ -4,7 +4,18 @@ use chrono::NaiveDateTime;
 use crate::schema::users;
 use crate::user::util::{make_hash, make_salt};
 
-#[derive(Debug, Identifiable, Serialize, Deserialize, Queryable, juniper::GraphQLObject)]
+#[derive(
+    Debug,
+    PartialEq,
+    PartialOrd,
+    Eq,
+    Hash,
+    Identifiable,
+    Serialize,
+    Deserialize,
+    Queryable,
+    juniper::GraphQLObject,
+)]
 pub struct User {
     pub id: i32,
     #[graphql(skip)]

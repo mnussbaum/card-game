@@ -8,10 +8,10 @@ CREATE TABLE card_groups (
   id SERIAL PRIMARY KEY,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   name VARCHAR NOT NULL,
-  initial_size INTEGER NOT NULL,
+  initial_size INTEGER,
   layout card_group_enum_layout NOT NULL,
   visibility card_group_enum_visibility NOT NULL,
-  user_id INTEGER,
+  user_id INTEGER REFERENCES users,
   game_id INTEGER REFERENCES games NOT NULL
 );
 

@@ -7,6 +7,7 @@ pub mod db;
 mod deck;
 pub mod errors;
 mod game;
+mod game_rules;
 pub mod graphql;
 pub mod player;
 pub mod route_handlers;
@@ -37,7 +38,7 @@ async fn main() -> io::Result<()> {
     let db_pool = create_db_pool().expect("failed to create DB pool");
 
     // TODO: secrets
-    let auth_duration = time::Duration::hours(i64::from(1));
+    let auth_duration = time::Duration::hours(i64::from(24));
     let domain = "localhost";
     let cookie_secret_key = "01230123012301230123012301230123";
     let secure_cookie = false;

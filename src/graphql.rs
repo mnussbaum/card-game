@@ -37,6 +37,9 @@ pub struct QueryRoot<'a> {
 
 // TODO: START HERE:
 // * Migrate game state into models and API
+//   * Make Player instantiation come from GameState rather then N+1-ing to load card groups and cards
+//     * Current issue is that player is holding onto a reference to game state
+//     * Maybe have it take data out of the game state?
 //   * Flesh out game create, instantiate rules
 //   * Deal players cards when games are created
 //   * Add communal cards to games when games are created
@@ -66,7 +69,7 @@ impl<'a> QueryRoot<'a> {
         let user = context.authenticated_user()?;
 
         let game_records = if let Some(id) = id {
-            GameRecord::find_by_user_and_id(connection, user, id)?
+            vec![GameRecord::find_by_user_and_id(connection, user, id)?]
         } else {
             GameRecord::belonging_to_user(connection, user)?
         };
@@ -95,6 +98,17 @@ impl<'a> MutationRoot<'a> {
         game.join(connection, user)?;
 
         Ok(game.into())
+    }
+
+    #[graphql(description = "Start a game")]
+    fn start_game(context: &Context<'a>, id: i32) -> FieldResult<Game> {
+        let user = context.authenticated_user()?;
+        let connection = &context.db_pool.get()?;
+        let game_record = GameRecord::find_by_user_and_id(connection, user, id)?;
+        let game: Game = game_record.into();
+        game.deal(connection)?;
+
+        Ok(game)
     }
 }
 

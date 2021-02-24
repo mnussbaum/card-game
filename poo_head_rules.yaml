@@ -3,24 +3,30 @@ min_player_count: 2
 max_player_count: 4
 
 player_hand:
-  blind_cards:
-    initial_deal_count: 3
+  - name: BlindCards
+    initial_size: 3
+    layout: Spread
     visibility: FaceDown
-  lower_cards:
-    initial_deal_count: 3
+  - name: LowerCards
+    initial_size: 3
+    layout: Spread
     visibility: FaceUp
-  hand_cards:
-    initial_deal_count: 3
+  - name: HandCards
+    initial_size: 3
+    layout: Spread
     visibility: VisibleToOwner
 
 communal_cards:
-  draw_pile:
+  - name: DrawPile
+    layout: Pile
     visibility: FaceDown
-  active_pile:
-    visibility: TopFaceUpRestFaceDown
-    initial_deal_count: 0
-  discard_pile:
-    initial_deal_count: 0
+  - name: ActivePile
+    initial_size: 0
+    layout: Pile
+    visibility: FaceUp
+  - name: DiscardPile
+    initial_size: 0
+    layout: Pile
     visibility: FaceDown
 
 cards:

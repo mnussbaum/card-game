@@ -11,7 +11,7 @@ use crate::errors::ServiceResult;
 use crate::schema::{games, games_users, users};
 use crate::user::model::{SlimUser, User};
 
-#[derive(Identifiable, Queryable, Associations)]
+#[derive(Debug, Identifiable, Queryable, Associations)]
 #[table_name = "games"]
 pub struct GameRecord {
     pub id: i32,
@@ -32,7 +32,7 @@ impl<'a> GameRecord {
             .get_results(connection)?)
     }
 
-    pub fn find_by_id(connection: &PooledConnection, id: i32) -> ServiceResult<GameRecord> {
+    pub fn find_by_id(connection: &PooledConnection, id: i32) -> ServiceResult<Self> {
         Ok(games::table
             .select(games::all_columns)
             .find(id)
@@ -44,13 +44,13 @@ impl<'a> GameRecord {
         connection: &PooledConnection,
         user: &SlimUser,
         id: i32,
-    ) -> ServiceResult<Vec<Self>> {
+    ) -> ServiceResult<Self> {
         Ok(users::table
             .inner_join(games_users::table.inner_join(games::table))
             .filter(users::id.eq(user.id))
             .select(games::all_columns)
             .filter(games::id.eq(id))
-            .load::<Self>(connection)?)
+            .first(connection)?)
     }
 
     pub fn belonging_to_user(
@@ -93,7 +93,7 @@ pub struct NewGame {
     pub player_turn_index: i32,
 }
 
-#[derive(Identifiable, Queryable, Associations)]
+#[derive(Debug, Identifiable, Queryable, Associations)]
 #[belongs_to(GameRecord, foreign_key = "game_id")]
 #[belongs_to(User)]
 #[table_name = "games_users"]
