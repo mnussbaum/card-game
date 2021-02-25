@@ -18,18 +18,23 @@ use crate::user::model::User;
 
 pub struct GameState<'a> {
     marker: std::marker::PhantomData<&'a ()>,
-    state: HashMap<User, Vec<(CardGroupRecord, Vec<Card>)>>,
+    inner: HashMap<User, HashMap<String, (CardGroupRecord, Vec<Card>)>>,
 }
 
 impl<'a> GameState<'a> {
     pub fn players(self) -> Vec<Player<'a>> {
-        self.state
+        self.inner
             .into_iter()
             .map(|(user, card_group_details)| {
-                let card_groups = card_group_details
-                    .into_iter()
-                    .map(|(card_group_record, cards)| (card_group_record, cards).into())
-                    .collect();
+                let card_groups = card_group_details.into_iter().fold(
+                    HashMap::new(),
+                    |mut acc, (card_group_name, (card_group_record, cards))| {
+                        acc.entry(card_group_name)
+                            .or_insert((card_group_record, cards).into());
+
+                        acc
+                    },
+                );
 
                 (user, card_groups).into()
             })
@@ -37,11 +42,11 @@ impl<'a> GameState<'a> {
     }
 }
 
-impl<'a> From<HashMap<User, Vec<(CardGroupRecord, Vec<Card>)>>> for GameState<'a> {
-    fn from(state: HashMap<User, Vec<(CardGroupRecord, Vec<Card>)>>) -> GameState<'a> {
+impl<'a> From<HashMap<User, HashMap<String, (CardGroupRecord, Vec<Card>)>>> for GameState<'a> {
+    fn from(state: HashMap<User, HashMap<String, (CardGroupRecord, Vec<Card>)>>) -> GameState<'a> {
         return GameState {
             marker: std::marker::PhantomData,
-            state,
+            inner: state,
         };
     }
 }
@@ -53,48 +58,53 @@ pub struct Game<'a> {
 
 impl<'a> Game<'a> {
     pub fn deal(&self, connection: &PooledConnection) -> ServiceResult<()> {
-        // let mut game_state = self.state(connection)?;
-        // let player_count = players.len();
+        let mut game_state = self.state(connection)?;
+        let mut players = game_state.players();
 
         let yams = fs::read_to_string("poo_head_rules.yaml")
             .expect("Something went wrong reading the file");
         let game_rules: GameRules = serde_yaml::from_str(&yams).unwrap();
-        // for player_hand in game_rules.player_hand.iter() {
-        //     let mut hand_at_initial_deal_count_for_all_players = false;
-        //
-        //     for player_index in (0..player_count).cycle() {
-        //         if player_index == 0 && hand_at_initial_deal_count_for_all_players {
-        //             break;
-        //         } else {
-        //             hand_at_initial_deal_count_for_all_players = true
-        //         }
-        //
-        //         let player = players
-        //             .get_mut(player_index)
-        //             .expect("Error getting a player by index");
-        //         let player_hand = player.hand.get_mut(player_hand_name).expect(&format!(
-        //             "Player {} is missing hand {}",
-        //             player.name, player_hand_name
-        //         ));
-        //
-        //         let (maybe_card_group_full, deck_empty) =
-        //             GameState::maybe_deal_card_to_card_group(&mut self.deck, player_hand);
-        //
-        //         // If there aren't enough cards to finish dealing I abruptly
-        //         // return here. Is this behavior correct? Should it be configurable?
-        //         if deck_empty {
-        //             return;
-        //         }
-        //
-        //         if let Some(card_group_full) = maybe_card_group_full {
-        //             if card_group_full {
-        //                 continue;
-        //             } else {
-        //                 hand_at_initial_deal_count_for_all_players = false;
-        //             }
-        //         }
-        //     }
-        // }
+
+        for player_hand in game_rules.player_hand.iter() {
+            let mut hand_at_initial_deal_count_for_all_players = false;
+
+            for player_index in (0..players.len()).cycle() {
+                if player_index == 0 && hand_at_initial_deal_count_for_all_players {
+                    break;
+                } else {
+                    hand_at_initial_deal_count_for_all_players = true
+                }
+
+                let player = players
+                    .get_mut(player_index)
+                    .expect("Error getting a player by index");
+                let player_id = player.id();
+                let player_card_group =
+                    player
+                        .get_card_group_mut(&player_hand.name)
+                        .expect(&format!(
+                            "Player {} is missing card group {}",
+                            player_id, player_hand.name
+                        ));
+                //
+                // let (maybe_card_group_full, deck_empty) =
+                //     GameState::maybe_deal_card_to_card_group(&mut self.deck, player_hand);
+                //
+                // // If there aren't enough cards to finish dealing I abruptly
+                // // return here. Is this behavior correct? Should it be configurable?
+                // if deck_empty {
+                //     return;
+                // }
+                //
+                // if let Some(card_group_full) = maybe_card_group_full {
+                //     if card_group_full {
+                //         continue;
+                //     } else {
+                //         hand_at_initial_deal_count_for_all_players = false;
+                //     }
+                // }
+            }
+        }
 
         Ok(())
     }
@@ -137,16 +147,19 @@ impl<'a> Game<'a> {
         let mut card_groups_by_user = card_groups.grouped_by(&users);
         card_groups_by_user.reverse();
 
-        let mut user_card_groups_cards: HashMap<User, Vec<(CardGroupRecord, Vec<Card>)>> =
-            HashMap::new();
+        let mut user_card_groups_cards: HashMap<
+            User,
+            HashMap<String, (CardGroupRecord, Vec<Card>)>,
+        > = HashMap::new();
         for users_card_groups in card_groups_by_user.into_iter() {
             let user = users.pop().expect("Missing expected user");
-            let user_card_groups = user_card_groups_cards.entry(user).or_insert(vec![]);
+            let user_card_groups = user_card_groups_cards.entry(user).or_insert(HashMap::new());
+
             for card_group in users_card_groups.into_iter() {
                 let cards = cards_by_card_group
                     .remove(card_group.id())
                     .unwrap_or(Vec::new());
-                user_card_groups.push((card_group, cards));
+                user_card_groups.insert(card_group.name.clone(), (card_group, cards));
             }
         }
 
