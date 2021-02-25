@@ -16,12 +16,13 @@ use crate::player::Player;
 use crate::schema::{card_groups, card_groups_cards, cards, games_users, users};
 use crate::user::model::User;
 
-pub struct GameState {
+pub struct GameState<'a> {
+    marker: std::marker::PhantomData<&'a ()>,
     state: HashMap<User, Vec<(CardGroupRecord, Vec<Card>)>>,
 }
 
-impl GameState {
-    pub fn players(self) -> Vec<Player> {
+impl<'a> GameState<'a> {
+    pub fn players(self) -> Vec<Player<'a>> {
         self.state
             .into_iter()
             .map(|(user, card_group_details)| {
@@ -36,9 +37,12 @@ impl GameState {
     }
 }
 
-impl From<HashMap<User, Vec<(CardGroupRecord, Vec<Card>)>>> for GameState {
-    fn from(state: HashMap<User, Vec<(CardGroupRecord, Vec<Card>)>>) -> GameState {
-        return GameState { state };
+impl<'a> From<HashMap<User, Vec<(CardGroupRecord, Vec<Card>)>>> for GameState<'a> {
+    fn from(state: HashMap<User, Vec<(CardGroupRecord, Vec<Card>)>>) -> GameState<'a> {
+        return GameState {
+            marker: std::marker::PhantomData,
+            state,
+        };
     }
 }
 
@@ -159,8 +163,7 @@ impl<'a> Game<'a> {
 
     fn players(&self, context: &Context<'a>) -> FieldResult<Vec<Player>> {
         let connection = &context.db_pool.get()?;
-        let mut state = self.state(connection)?;
-        Ok(state.players())
+        Ok(self.state(connection)?.players())
     }
 
     fn player_turn_index(&self) -> i32 {

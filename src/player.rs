@@ -3,17 +3,17 @@ use std::convert::From;
 use juniper::graphql_object;
 
 use crate::deck::graphql::CardGroup;
-use crate::game::graphql::GameState;
+use crate::graphql::Context;
 use crate::user::model::User;
 
-pub struct Player {
+pub struct Player<'a> {
     user: User,
-    card_groups: Vec<CardGroup>,
+    card_groups: Vec<CardGroup<'a>>,
 }
 
-#[graphql_object]
+#[graphql_object(context = Context<'a>)]
 #[graphql(description = "A game player")]
-impl Player {
+impl<'a> Player<'a> {
     fn id(&self) -> i32 {
         self.user.id
     }
@@ -27,8 +27,8 @@ impl Player {
     }
 }
 
-impl From<(User, Vec<CardGroup>)> for Player {
-    fn from(user_and_card_groups: (User, Vec<CardGroup>)) -> Player {
+impl<'a> From<(User, Vec<CardGroup<'a>>)> for Player<'a> {
+    fn from(user_and_card_groups: (User, Vec<CardGroup<'a>>)) -> Player<'a> {
         let user = user_and_card_groups.0;
         let card_groups = user_and_card_groups.1;
 

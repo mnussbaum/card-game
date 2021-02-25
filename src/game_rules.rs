@@ -220,15 +220,15 @@ pub struct CardMove {
     card_conditions: Vec<CardCondition>,
 }
 
-// impl CardMove {
-//     fn execute(&self, game: &mut Game) -> Result<(), String> {
-//         // TODO: Prompt user to figure out what cards they want to move
-//         // See if their selection meets the card conditions
-//         // See if their selection is OK by the active consequences
-//         // If so, move them
-//         Ok(())
-//     }
-// }
+impl CardMove {
+    fn execute(&self, game: &mut Game) -> Result<(), String> {
+        // TODO: Prompt user to figure out what cards they want to move
+        // See if their selection meets the card conditions
+        // See if their selection is OK by the active consequences
+        // If so, move them
+        Ok(())
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CardSwap {
@@ -332,18 +332,18 @@ enum Operator {
     LessThan,
     LessThanOrEqual,
 }
-//
-// impl Operator {
-//     pub fn compare(&self, lhs: usize, rhs: usize) -> bool {
-//         match self {
-//             Operator::Equal => lhs == rhs,
-//             Operator::GreaterThan => lhs > rhs,
-//             Operator::GreaterThanOrEqual => lhs >= rhs,
-//             Operator::LessThan => lhs < rhs,
-//             Operator::LessThanOrEqual => lhs <= rhs,
-//         }
-//     }
-// }
+
+impl Operator {
+    pub fn compare(&self, lhs: usize, rhs: usize) -> bool {
+        match self {
+            Operator::Equal => lhs == rhs,
+            Operator::GreaterThan => lhs > rhs,
+            Operator::GreaterThanOrEqual => lhs >= rhs,
+            Operator::LessThan => lhs < rhs,
+            Operator::LessThanOrEqual => lhs <= rhs,
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 enum CardCondition {

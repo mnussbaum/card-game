@@ -37,9 +37,6 @@ pub struct QueryRoot<'a> {
 
 // TODO: START HERE:
 // * Migrate game state into models and API
-//   * Make Player instantiation come from GameState rather then N+1-ing to load card groups and cards
-//     * Current issue is that player is holding onto a reference to game state
-//     * Maybe have it take data out of the game state?
 //   * Flesh out game create, instantiate rules
 //   * Deal players cards when games are created
 //   * Add communal cards to games when games are created
