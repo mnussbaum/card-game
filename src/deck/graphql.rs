@@ -1,5 +1,3 @@
-use std::convert::From;
-
 use crate::graphql::Context;
 use juniper::{graphql_object, FieldResult};
 
@@ -9,6 +7,16 @@ pub struct CardGroup<'a> {
     marker: std::marker::PhantomData<&'a ()>,
     record: CardGroupRecord,
     cards: Vec<Card>,
+}
+
+impl<'a> CardGroup<'a> {
+    pub fn new(record: CardGroupRecord, cards: Vec<Card>) -> CardGroup<'a> {
+        CardGroup {
+            cards,
+            marker: std::marker::PhantomData,
+            record,
+        }
+    }
 }
 
 #[graphql_object(context = Context<'a>)]
@@ -63,15 +71,5 @@ impl<'a> CardGroup<'a> {
                 Ok(Card::repeat_covered_card(connection, cards.len())?)
             }
         }
-    }
-}
-
-impl<'a> From<(CardGroupRecord, Vec<Card>)> for CardGroup<'a> {
-    fn from(record_and_cards: (CardGroupRecord, Vec<Card>)) -> CardGroup<'a> {
-        return CardGroup {
-            marker: std::marker::PhantomData,
-            record: record_and_cards.0,
-            cards: record_and_cards.1,
-        };
     }
 }

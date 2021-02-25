@@ -7,6 +7,7 @@ use itertools::{EitherOrBoth::*, Itertools};
 use juniper::{graphql_object, FieldResult};
 
 use crate::db::PooledConnection;
+use crate::deck::graphql::CardGroup;
 use crate::deck::records::{Card, CardGroupRecord};
 use crate::errors::ServiceResult;
 use crate::game::record::GameRecord;
@@ -19,10 +20,13 @@ use crate::user::model::User;
 pub struct GameState<'a> {
     marker: std::marker::PhantomData<&'a ()>,
     inner: HashMap<User, HashMap<String, (CardGroupRecord, Vec<Card>)>>,
+    game_id: i32,
 }
 
 impl<'a> GameState<'a> {
     pub fn players(self) -> Vec<Player<'a>> {
+        let game_id = self.game_id;
+
         self.inner
             .into_iter()
             .map(|(user, card_group_details)| {
@@ -30,24 +34,15 @@ impl<'a> GameState<'a> {
                     HashMap::new(),
                     |mut acc, (card_group_name, (card_group_record, cards))| {
                         acc.entry(card_group_name)
-                            .or_insert((card_group_record, cards).into());
+                            .or_insert(CardGroup::new(card_group_record, cards));
 
                         acc
                     },
                 );
 
-                (user, card_groups).into()
+                Player::new(game_id, user, card_groups)
             })
             .collect()
-    }
-}
-
-impl<'a> From<HashMap<User, HashMap<String, (CardGroupRecord, Vec<Card>)>>> for GameState<'a> {
-    fn from(state: HashMap<User, HashMap<String, (CardGroupRecord, Vec<Card>)>>) -> GameState<'a> {
-        return GameState {
-            marker: std::marker::PhantomData,
-            inner: state,
-        };
     }
 }
 
@@ -78,14 +73,11 @@ impl<'a> Game<'a> {
                 let player = players
                     .get_mut(player_index)
                     .expect("Error getting a player by index");
-                let player_id = player.id();
-                let player_card_group =
-                    player
-                        .get_card_group_mut(&player_hand.name)
-                        .expect(&format!(
-                            "Player {} is missing card group {}",
-                            player_id, player_hand.name
-                        ));
+                let player_card_group = match player.get_card_group_mut(&player_hand.name) {
+                    None => player.create_card_group_from_description(player_hand, connection)?,
+
+                    Some(card_group) => card_group,
+                };
                 //
                 // let (maybe_card_group_full, deck_empty) =
                 //     GameState::maybe_deal_card_to_card_group(&mut self.deck, player_hand);
@@ -163,7 +155,11 @@ impl<'a> Game<'a> {
             }
         }
 
-        Ok(user_card_groups_cards.into())
+        Ok(GameState {
+            game_id: self.record.id,
+            inner: user_card_groups_cards,
+            marker: std::marker::PhantomData,
+        })
     }
 }
 

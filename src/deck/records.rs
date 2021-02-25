@@ -148,6 +148,17 @@ pub struct CardGroupRecord {
     pub game_id: i32,
 }
 
+#[derive(Insertable)]
+#[table_name = "card_groups"]
+pub struct NewCardGroupRecord {
+    pub name: String,
+    pub initial_size: Option<i32>,
+    pub layout: CardGroupLayout,
+    pub visibility: CardGroupVisibility,
+    pub user_id: Option<i32>,
+    pub game_id: i32,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct CardGroupDescription {
     pub name: String,
