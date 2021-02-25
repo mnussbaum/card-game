@@ -520,12 +520,17 @@ pub struct TurnType {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+pub struct DeckDescription {
+    pub cards: HashMap<Rank, CardValue>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 pub struct GameRules {
     pub min_player_count: usize,
     pub max_player_count: usize,
     pub player_hand: Vec<CardGroupDescription>,
     pub communal_cards: Vec<CardGroupDescription>,
-    pub cards: HashMap<Rank, CardValue>,
+    pub deck: DeckDescription,
     pub game_flow: Vec<TurnType>,
 }
 

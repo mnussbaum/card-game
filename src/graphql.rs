@@ -37,8 +37,8 @@ pub struct QueryRoot<'a> {
 
 // TODO: START HERE:
 // * Migrate game state into models and API
-//   * Instantiate a deck and other communal cards onto game state
-//   * Teach game state how to add a card from the deck into a card group
+//   * Create and deal to communal card groups
+//   * Only allow a game to start once
 // * When users request a game also give them their available actions
 // * Move user CRUD into graphql and out of REST
 // * Add tests

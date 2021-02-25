@@ -29,42 +29,30 @@ communal_cards:
     layout: Pile
     visibility: FaceDown
 
-cards:
-  Two:
-    value: Wild
-  Three:
-    value: Wild
-  Four:
-    value:
+deck:
+  cards:
+    Two: Wild
+    Three: Wild
+    Four:
       Numeric: 1
-  Five:
-    value:
+    Five:
       Numeric: 2
-  Six:
-    value:
+    Six:
       Numeric: 3
-  Seven:
-    value:
+    Seven:
       Numeric: 4
-  Eight:
-    value:
+    Eight:
       Numeric: 5
-  Nine:
-    value:
+    Nine:
       Numeric: 6
-  Ten:
-    value: Wild
-  Jack:
-    value:
+    Ten: Wild
+    Jack:
       Numeric: 7
-  Queen:
-    value:
+    Queen:
       Numeric: 8
-  King:
-    value:
+    King:
       Numeric: 9
-  Ace:
-    value:
+    Ace:
       Numeric: 10
 
 game_flow:

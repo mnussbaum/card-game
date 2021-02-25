@@ -1,7 +1,13 @@
-use crate::graphql::Context;
+use diesel::prelude::*;
 use juniper::{graphql_object, FieldResult};
 
-use crate::deck::records::{Card, CardGroupLayout, CardGroupRecord, CardGroupVisibility};
+use crate::db::PooledConnection;
+use crate::deck::records::{
+    Card, CardGroupLayout, CardGroupRecord, CardGroupVisibility, Deck, NewCardGroupCard,
+};
+use crate::errors::ServiceResult;
+use crate::graphql::Context;
+use crate::schema::card_groups_cards;
 
 pub struct CardGroup<'a> {
     marker: std::marker::PhantomData<&'a ()>,
@@ -16,6 +22,57 @@ impl<'a> CardGroup<'a> {
             marker: std::marker::PhantomData,
             record,
         }
+    }
+
+    pub fn at_or_over_initial_size(&self) -> Option<bool> {
+        if let Some(initial_size) = self.record.initial_size {
+            if self.cards.len() as i32 >= initial_size {
+                return Some(true);
+            } else {
+                return Some(false);
+            }
+        }
+
+        return None;
+    }
+
+    // Deals a card from the deck if the card group isn't full and if the deck
+    // isn't empty
+    pub fn deal_card_from_deck_if_not_full(
+        &mut self,
+        deck: &mut Deck,
+        connection: &PooledConnection,
+    ) -> ServiceResult<bool> {
+        if let Some(at_or_over_initial_size) = self.at_or_over_initial_size() {
+            if at_or_over_initial_size {
+                return Ok(true);
+            }
+        }
+
+        if let Some(card) = deck.cards.pop() {
+            self.add_card(card, connection)?;
+        }
+
+        if let Some(at_or_over_initial_size) = self.at_or_over_initial_size() {
+            if at_or_over_initial_size {
+                return Ok(true);
+            }
+        }
+
+        return Ok(false);
+    }
+
+    pub fn add_card(&mut self, card: Card, connection: &PooledConnection) -> ServiceResult<()> {
+        diesel::insert_into(card_groups_cards::table)
+            .values(&NewCardGroupCard {
+                card_id: card.id,
+                card_group_id: self.record.id,
+            })
+            .execute(connection)?;
+
+        self.cards.push(card);
+
+        Ok(())
     }
 }
 

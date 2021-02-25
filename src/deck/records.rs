@@ -5,11 +5,14 @@ use diesel::prelude::*;
 use diesel::Queryable;
 use diesel_derive_enum::DbEnum;
 use juniper::{GraphQLEnum, GraphQLObject};
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 
 use crate::db::PooledConnection;
 use crate::errors::ServiceResult;
 use crate::game::record::GameRecord;
+use crate::game_rules::DeckDescription;
 use crate::schema::{card_groups, card_groups_cards, cards};
 use crate::user::model::User;
 
@@ -115,6 +118,29 @@ impl fmt::Display for Card {
     }
 }
 
+pub struct Deck {
+    pub cards: Vec<Card>,
+}
+
+impl Deck {
+    pub fn new_from_description(
+        description: DeckDescription,
+        connection: &PooledConnection,
+    ) -> ServiceResult<Self> {
+        let used_card_ranks: Vec<&Rank> = description.cards.keys().collect();
+
+        use diesel::pg::expression::dsl::any;
+        let mut cards = cards::table
+            .filter(cards::rank_text.eq(any(used_card_ranks)))
+            .select(cards::all_columns)
+            .get_results(connection)?;
+
+        cards.shuffle(&mut thread_rng());
+
+        Ok(Self { cards })
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, DbEnum, GraphQLEnum, Deserialize, Serialize)]
 #[DieselType = "Card_group_enum_layout"]
 #[PgType = "card_grou_enum_layout"]
@@ -188,6 +214,13 @@ impl CardGroupRecord {
 pub struct CardGroupCard {
     pub id: i32,
     pub created_at: NaiveDateTime,
+    pub card_id: i32,
+    pub card_group_id: i32,
+}
+
+#[derive(Insertable)]
+#[table_name = "card_groups_cards"]
+pub struct NewCardGroupCard {
     pub card_id: i32,
     pub card_group_id: i32,
 }

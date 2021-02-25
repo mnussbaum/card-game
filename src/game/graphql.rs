@@ -8,7 +8,7 @@ use juniper::{graphql_object, FieldResult};
 
 use crate::db::PooledConnection;
 use crate::deck::graphql::CardGroup;
-use crate::deck::records::{Card, CardGroupRecord};
+use crate::deck::records::{Card, CardGroupRecord, Deck};
 use crate::errors::ServiceResult;
 use crate::game::record::GameRecord;
 use crate::game_rules::GameRules;
@@ -53,48 +53,46 @@ pub struct Game<'a> {
 
 impl<'a> Game<'a> {
     pub fn deal(&self, connection: &PooledConnection) -> ServiceResult<()> {
-        let mut game_state = self.state(connection)?;
+        let game_state = self.state(connection)?;
         let mut players = game_state.players();
 
         let yams = fs::read_to_string("poo_head_rules.yaml")
             .expect("Something went wrong reading the file");
         let game_rules: GameRules = serde_yaml::from_str(&yams).unwrap();
+        let mut deck = Deck::new_from_description(game_rules.deck, connection)?;
 
         for player_hand in game_rules.player_hand.iter() {
             let mut hand_at_initial_deal_count_for_all_players = false;
+            let mut player_card_groups: Vec<&mut CardGroup> = players
+                .iter_mut()
+                .map(|player| player.create_card_group_from_description(player_hand, connection))
+                .fold_ok(Vec::new(), |mut acc, player| {
+                    acc.push(player);
+                    acc
+                })?;
 
-            for player_index in (0..players.len()).cycle() {
-                if player_index == 0 && hand_at_initial_deal_count_for_all_players {
+            for card_group_index in (0..player_card_groups.len()).cycle() {
+                if card_group_index == 0 && hand_at_initial_deal_count_for_all_players {
                     break;
                 } else {
                     hand_at_initial_deal_count_for_all_players = true
                 }
 
-                let player = players
-                    .get_mut(player_index)
-                    .expect("Error getting a player by index");
-                let player_card_group = match player.get_card_group_mut(&player_hand.name) {
-                    None => player.create_card_group_from_description(player_hand, connection)?,
+                let card_group = player_card_groups
+                    .get_mut(card_group_index)
+                    .expect("Missing card_group fetched by index during dealing");
+                let card_group_full =
+                    card_group.deal_card_from_deck_if_not_full(&mut deck, connection)?;
 
-                    Some(card_group) => card_group,
-                };
-                //
-                // let (maybe_card_group_full, deck_empty) =
-                //     GameState::maybe_deal_card_to_card_group(&mut self.deck, player_hand);
-                //
-                // // If there aren't enough cards to finish dealing I abruptly
-                // // return here. Is this behavior correct? Should it be configurable?
-                // if deck_empty {
-                //     return;
-                // }
-                //
-                // if let Some(card_group_full) = maybe_card_group_full {
-                //     if card_group_full {
-                //         continue;
-                //     } else {
-                //         hand_at_initial_deal_count_for_all_players = false;
-                //     }
-                // }
+                // If there aren't enough cards to finish dealing I abruptly
+                // return here. Is this behavior correct? Should it be configurable?
+                if deck.cards.len() == 0 {
+                    return Ok(());
+                }
+
+                if !card_group_full {
+                    hand_at_initial_deal_count_for_all_players = false;
+                }
             }
         }
 

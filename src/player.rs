@@ -31,10 +31,6 @@ impl<'a> Player<'a> {
         }
     }
 
-    pub fn get_card_group_mut(&mut self, card_group_name: &str) -> Option<&mut CardGroup<'a>> {
-        self.card_groups.get_mut(card_group_name)
-    }
-
     pub fn id(&self) -> i32 {
         self.user.id
     }
