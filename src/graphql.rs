@@ -37,7 +37,8 @@ pub struct QueryRoot<'a> {
 
 // TODO: START HERE:
 // * Migrate game state into models and API
-//   * Create and deal to communal card groups
+//   * Return communal cards in game state and graphql of Game
+//   * Ensure communal cards are being dealt correctly
 //   * Only allow a game to start once
 // * When users request a game also give them their available actions
 // * Move user CRUD into graphql and out of REST
@@ -101,7 +102,7 @@ impl<'a> MutationRoot<'a> {
         let user = context.authenticated_user()?;
         let connection = &context.db_pool.get()?;
         let game_record = GameRecord::find_by_user_and_id(connection, user, id)?;
-        let game: Game = game_record.into();
+        let mut game: Game = game_record.into();
         game.deal(connection)?;
 
         Ok(game)

@@ -185,6 +185,19 @@ pub struct NewCardGroupRecord {
     pub game_id: i32,
 }
 
+impl NewCardGroupRecord {
+    pub fn new_from_description(description: &CardGroupDescription, game_id: i32) -> Self {
+        NewCardGroupRecord {
+            name: description.name.clone(),
+            initial_size: description.initial_size.clone(),
+            layout: description.layout.clone(),
+            visibility: description.visibility.clone(),
+            user_id: None,
+            game_id,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct CardGroupDescription {
     pub name: String,

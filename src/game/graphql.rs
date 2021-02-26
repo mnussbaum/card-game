@@ -8,7 +8,7 @@ use juniper::{graphql_object, FieldResult};
 
 use crate::db::PooledConnection;
 use crate::deck::graphql::CardGroup;
-use crate::deck::records::{Card, CardGroupRecord, Deck};
+use crate::deck::records::{Card, CardGroupDescription, CardGroupRecord, Deck, NewCardGroupRecord};
 use crate::errors::ServiceResult;
 use crate::game::record::GameRecord;
 use crate::game_rules::GameRules;
@@ -47,12 +47,36 @@ impl<'a> GameState<'a> {
 }
 
 pub struct Game<'a> {
-    marker: std::marker::PhantomData<&'a ()>,
+    communal_card_groups: HashMap<String, CardGroup<'a>>,
     record: GameRecord,
 }
 
 impl<'a> Game<'a> {
-    pub fn deal(&self, connection: &PooledConnection) -> ServiceResult<()> {
+    pub fn create_card_group_from_description(
+        &mut self,
+        description: &CardGroupDescription,
+        connection: &PooledConnection,
+    ) -> ServiceResult<&mut CardGroup<'a>> {
+        let card_group_record: CardGroupRecord = diesel::insert_into(card_groups::table)
+            .values(&NewCardGroupRecord::new_from_description(
+                description,
+                self.record.id,
+            ))
+            .returning(card_groups::all_columns)
+            .get_result::<CardGroupRecord>(connection)?;
+
+        self.communal_card_groups.insert(
+            card_group_record.name.clone(),
+            CardGroup::new(card_group_record, vec![]),
+        );
+
+        Ok(self
+            .communal_card_groups
+            .get_mut(&description.name)
+            .expect("Just inserted card group is missing on player state"))
+    }
+
+    pub fn deal(&mut self, connection: &PooledConnection) -> ServiceResult<()> {
         let game_state = self.state(connection)?;
         let mut players = game_state.players();
 
@@ -61,21 +85,26 @@ impl<'a> Game<'a> {
         let game_rules: GameRules = serde_yaml::from_str(&yams).unwrap();
         let mut deck = Deck::new_from_description(game_rules.deck, connection)?;
 
-        for player_hand in game_rules.player_hand.iter() {
-            let mut hand_at_initial_deal_count_for_all_players = false;
+        for player_card_group_description in game_rules.player_hand.iter() {
+            let mut players_card_groups_full = false;
             let mut player_card_groups: Vec<&mut CardGroup> = players
                 .iter_mut()
-                .map(|player| player.create_card_group_from_description(player_hand, connection))
+                .map(|player| {
+                    player.create_card_group_from_description(
+                        player_card_group_description,
+                        connection,
+                    )
+                })
                 .fold_ok(Vec::new(), |mut acc, player| {
                     acc.push(player);
                     acc
                 })?;
 
             for card_group_index in (0..player_card_groups.len()).cycle() {
-                if card_group_index == 0 && hand_at_initial_deal_count_for_all_players {
+                if card_group_index == 0 && players_card_groups_full {
                     break;
                 } else {
-                    hand_at_initial_deal_count_for_all_players = true
+                    players_card_groups_full = true
                 }
 
                 let card_group = player_card_groups
@@ -86,12 +115,30 @@ impl<'a> Game<'a> {
 
                 // If there aren't enough cards to finish dealing I abruptly
                 // return here. Is this behavior correct? Should it be configurable?
-                if deck.cards.len() == 0 {
-                    return Ok(());
-                }
+                // if deck.cards.len() == 0 {
+                //     return Ok(());
+                // }
 
                 if !card_group_full {
-                    hand_at_initial_deal_count_for_all_players = false;
+                    players_card_groups_full = false;
+                }
+            }
+        }
+
+        for communal_card_group_description in game_rules.communal_cards.iter() {
+            self.create_card_group_from_description(communal_card_group_description, connection)?;
+        }
+
+        for communal_card_group in self.communal_card_groups.values_mut() {
+            loop {
+                let card_group_full =
+                    communal_card_group.deal_card_from_deck_if_not_full(&mut deck, connection)?;
+
+                // If there aren't enough cards to finish dealing I abruptly
+                // return here. Is this behavior correct? Should it be configurable?
+
+                if card_group_full || deck.cards.len() == 0 {
+                    break;
                 }
             }
         }
@@ -168,6 +215,14 @@ impl<'a> Game<'a> {
         self.record.id
     }
 
+    // fn communal_card_groups(
+    //     &self,
+    //     context: &Context<'a>,
+    // ) -> FieldResult<HashMap<String, CardGroup>> {
+    //     let connection = &context.db_pool.get()?;
+    //     Ok(self.state(connection)?.communal_card_groups())
+    // }
+
     fn players(&self, context: &Context<'a>) -> FieldResult<Vec<Player>> {
         let connection = &context.db_pool.get()?;
         Ok(self.state(connection)?.players())
@@ -181,7 +236,7 @@ impl<'a> Game<'a> {
 impl<'a> From<GameRecord> for Game<'a> {
     fn from(record: GameRecord) -> Game<'a> {
         return Game {
-            marker: std::marker::PhantomData,
+            communal_card_groups: HashMap::new(),
             record,
         };
     }

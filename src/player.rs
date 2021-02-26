@@ -40,15 +40,12 @@ impl<'a> Player<'a> {
         description: &CardGroupDescription,
         connection: &PooledConnection,
     ) -> ServiceResult<&mut CardGroup<'a>> {
+        let mut new_card_group_record =
+            NewCardGroupRecord::new_from_description(description, self.game_id);
+
+        new_card_group_record.user_id = Some(self.id());
         let card_group_record: CardGroupRecord = diesel::insert_into(card_groups::table)
-            .values(&NewCardGroupRecord {
-                name: description.name.clone(),
-                initial_size: description.initial_size.clone(),
-                layout: description.layout.clone(),
-                visibility: description.visibility.clone(),
-                user_id: Some(self.user.id),
-                game_id: self.game_id,
-            })
+            .values(new_card_group_record)
             .returning(card_groups::all_columns)
             .get_result::<CardGroupRecord>(connection)?;
 
