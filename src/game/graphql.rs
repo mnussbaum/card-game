@@ -18,16 +18,17 @@ use crate::schema::{card_groups, card_groups_cards, cards, games_users, users};
 use crate::user::model::User;
 
 pub struct GameState<'a> {
-    marker: std::marker::PhantomData<&'a ()>,
-    inner: HashMap<User, HashMap<String, (CardGroupRecord, Vec<Card>)>>,
+    communal_card_groups: HashMap<String, (CardGroupRecord, Vec<Card>)>,
     game_id: i32,
+    marker: std::marker::PhantomData<&'a ()>,
+    player_state: HashMap<User, HashMap<String, (CardGroupRecord, Vec<Card>)>>,
 }
 
 impl<'a> GameState<'a> {
     pub fn players(self) -> Vec<Player<'a>> {
         let game_id = self.game_id;
 
-        self.inner
+        self.player_state
             .into_iter()
             .map(|(user, card_group_details)| {
                 let card_groups = card_group_details.into_iter().fold(
@@ -41,6 +42,15 @@ impl<'a> GameState<'a> {
                 );
 
                 Player::new(game_id, user, card_groups)
+            })
+            .collect()
+    }
+
+    pub fn communal_card_groups(self) -> Vec<CardGroup<'a>> {
+        self.communal_card_groups
+            .into_iter()
+            .map(|(_, (card_group_record, card_group_cards))| {
+                CardGroup::new(card_group_record, card_group_cards)
             })
             .collect()
     }
@@ -154,19 +164,22 @@ impl<'a> Game<'a> {
             .select(users::all_columns)
             .get_results::<User>(connection)?;
 
-        let card_groups = CardGroupRecord::belonging_to(&users)
+        let player_card_groups = CardGroupRecord::belonging_to(&users)
             .order_by(card_groups::user_id.desc())
             .load::<CardGroupRecord>(connection)?;
 
-        let card_group_ids = &card_groups.iter().map(|c| c.id).collect::<Vec<i32>>();
+        let card_group_ids = &player_card_groups
+            .iter()
+            .map(|c| c.id)
+            .collect::<Vec<i32>>();
 
         use diesel::pg::expression::dsl::any;
-        let card_group_ids_and_cards = cards::table
-            .inner_join(card_groups_cards::table)
+        let card_group_ids_and_cards = card_groups::table
+            .left_outer_join(card_groups_cards::table.left_outer_join(cards::table))
             .filter(card_groups_cards::card_group_id.eq(any(card_group_ids)))
-            .select((card_groups_cards::card_group_id, cards::all_columns))
-            .order_by(card_groups_cards::card_group_id)
-            .load::<(i32, Card)>(connection)?;
+            .select((card_groups::id, cards::all_columns.nullable()))
+            .order_by(card_groups::id)
+            .load::<(i32, Option<Card>)>(connection)?;
 
         let mut cards_by_card_group: HashMap<i32, Vec<Card>> = card_group_ids_and_cards
             .into_iter()
@@ -175,13 +188,14 @@ impl<'a> Game<'a> {
             .fold(
                 HashMap::new(),
                 |mut acc, (card_group_id, card_group_cards_iter)| {
-                    let card_group_cards = card_group_cards_iter.map(|(_, card)| card).collect();
+                    let card_group_cards =
+                        card_group_cards_iter.filter_map(|(_, card)| card).collect();
                     acc.entry(card_group_id).or_insert(card_group_cards);
                     acc
                 },
             );
 
-        let mut card_groups_by_user = card_groups.grouped_by(&users);
+        let mut card_groups_by_user = player_card_groups.grouped_by(&users);
         card_groups_by_user.reverse();
 
         let mut user_card_groups_cards: HashMap<
@@ -200,9 +214,50 @@ impl<'a> Game<'a> {
             }
         }
 
+        let communal_card_group_records = CardGroupRecord::belonging_to(&self.record)
+            .filter(card_groups::user_id.is_null())
+            .order_by(card_groups::id.desc())
+            .load::<CardGroupRecord>(connection)?;
+        let mut communal_card_groups_by_id =
+            communal_card_group_records
+                .into_iter()
+                .fold(HashMap::new(), |mut acc, c| {
+                    acc.entry(c.id).or_insert(c);
+                    acc
+                });
+
+        let card_group_ids: Vec<&i32> = communal_card_groups_by_id.keys().collect();
+        let communal_card_group_ids_and_cards = card_groups::table
+            .left_outer_join(card_groups_cards::table.left_outer_join(cards::table))
+            .filter(card_groups::id.eq(any(card_group_ids)))
+            .select((card_groups::id, cards::all_columns.nullable()))
+            .order_by(card_groups::id)
+            .load::<(i32, Option<Card>)>(connection)?;
+
+        let communal_cards_by_card_group: HashMap<String, (CardGroupRecord, Vec<Card>)> =
+            communal_card_group_ids_and_cards
+                .into_iter()
+                .group_by(|(card_group_id, _)| *card_group_id)
+                .into_iter()
+                .fold(
+                    HashMap::new(),
+                    |mut acc, (card_group_id, card_group_cards_iter)| {
+                        let card_group_cards =
+                            card_group_cards_iter.filter_map(|(_, card)| card).collect();
+                        let card_group = communal_card_groups_by_id
+                            .remove(&card_group_id)
+                            .expect("Missing card group indexed by ID");
+                        acc.entry(card_group.name.to_owned())
+                            .or_insert((card_group, card_group_cards));
+
+                        acc
+                    },
+                );
+
         Ok(GameState {
+            communal_card_groups: communal_cards_by_card_group,
             game_id: self.record.id,
-            inner: user_card_groups_cards,
+            player_state: user_card_groups_cards,
             marker: std::marker::PhantomData,
         })
     }
@@ -215,13 +270,10 @@ impl<'a> Game<'a> {
         self.record.id
     }
 
-    // fn communal_card_groups(
-    //     &self,
-    //     context: &Context<'a>,
-    // ) -> FieldResult<HashMap<String, CardGroup>> {
-    //     let connection = &context.db_pool.get()?;
-    //     Ok(self.state(connection)?.communal_card_groups())
-    // }
+    fn communal_card_groups(&self, context: &Context<'a>) -> FieldResult<Vec<CardGroup>> {
+        let connection = &context.db_pool.get()?;
+        Ok(self.state(connection)?.communal_card_groups())
+    }
 
     fn players(&self, context: &Context<'a>) -> FieldResult<Vec<Player>> {
         let connection = &context.db_pool.get()?;
