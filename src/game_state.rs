@@ -5,7 +5,6 @@ use serde::Serialize;
 use crate::card_deck::{CardGroup, Deck};
 use crate::game_rules::GameRules;
 use crate::player::Player;
-use crate::user_input;
 
 #[derive(Clone, Debug, Serialize)]
 pub struct GameState {
@@ -157,9 +156,9 @@ impl GameState {
             // Action.excute
             let game_rules = self.game_rules.clone();
             let available_actions = game_rules.available_actions(self)?;
-            if let Some(selected_action) = user_input::select_action(available_actions) {
-                selected_action.execute(self)?;
-            }
+            // if let Some(selected_action) = user_input::select_action(available_actions) {
+            //     selected_action.execute(self)?;
+            // }
 
             // TODO:
             //

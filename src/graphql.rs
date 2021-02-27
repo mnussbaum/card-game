@@ -36,13 +36,7 @@ pub struct QueryRoot<'a> {
 }
 
 // TODO: START HERE:
-// * Migrate game state into models and API
-//   * Only allow a game to start once
 // * When users request a game also give them their available actions
-// * Move user CRUD into graphql and out of REST
-// * Add tests
-// * Add CSRF protection
-// * Do I need to use blocking indicators around DB queries?
 //
 // * Figure out how to specify necessary user input in serialized actions
 // * Prompt user for input client side
@@ -51,8 +45,12 @@ pub struct QueryRoot<'a> {
 // * Ensure user actually has action available to them, and that filled inputs are valid
 // * Execute action with inputs
 //
-// * Port more game fields and models into DB and graphql resources
-// * Migrate existing logic into new models
+// * Only allow a game to start once
+// * Move user CRUD into graphql and out of REST
+// * Add tests
+// * Add CSRF protection
+// * Do I need to use blocking indicators around DB queries?
+//
 // * Use websockets
 // * Use something like Apollo on the front end to receive game state
 
