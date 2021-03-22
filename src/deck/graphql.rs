@@ -12,7 +12,7 @@ use crate::schema::card_groups_cards;
 pub struct CardGroup<'a> {
     marker: std::marker::PhantomData<&'a ()>,
     record: CardGroupRecord,
-    cards: Vec<Card>,
+    pub cards: Vec<Card>,
 }
 
 impl<'a> CardGroup<'a> {

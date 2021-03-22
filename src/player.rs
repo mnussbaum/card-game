@@ -35,6 +35,10 @@ impl<'a> Player<'a> {
         self.user.id
     }
 
+    pub fn card_groups_by_name(&self) -> &HashMap<String, CardGroup> {
+        &self.card_groups
+    }
+
     pub fn create_card_group_from_description(
         &mut self,
         description: &CardGroupDescription,

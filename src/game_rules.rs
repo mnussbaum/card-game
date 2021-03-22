@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::fmt;
 
 use crate::deck::graphql::CardGroup;
-use crate::deck::records::{Card, CardGroupDescription, CardValue, Rank};
-use crate::errors::ServiceResult;
+use crate::deck::records::{Card, CardGroupDescription, CardGroupRecord, CardValue, Rank};
+use crate::errors::{ServiceError, ServiceResult};
 use crate::game::graphql::Game;
 use serde::{Deserialize, Serialize};
 
@@ -49,33 +49,32 @@ const COMMUNAL_CARDS: &str = "communal_cards";
 
 impl CardGroupId {
     fn owners_card_groups<'a>(
-        &self,
+        &'a self,
         game: &'a Game,
-    ) -> Result<&'a HashMap<String, CardGroup>, String> {
+    ) -> ServiceResult<&'a HashMap<String, CardGroup>> {
         match &self.owner {
             CardGroupOwner::Name(owner_name) => {
                 if owner_name == COMMUNAL_CARDS {
-                    Ok(&game.communal_cards)
+                    Ok(game.communal_card_groups())
                 } else {
-                    return Err(format!(
+                    return Err(ServiceError::BadRequest(format!(
                         "Invalid card group owner name. Right now only 'communal_cards' is supported. Given: {}",
                         owner_name,
-                    ).into());
+                    ).into()));
                 }
             }
 
             CardGroupOwner::RelativePlayer {
                 offset_from_current_player,
             } => {
-                let player_count = game.players().len();
-                if let Some(player) = game.offset_from_current_player(*offset_from_current_player) {
-                    Ok(&player.hand)
-                } else {
-                    return Err(format!(
+                let player_count = game.player_state.len();
+                let player = game
+                    .offset_from_current_player(*offset_from_current_player as i32)
+                    .expect(&format!(
                         "Invalid player index. Given: {}. Player count: {}",
                         offset_from_current_player, player_count,
                     ));
-                }
+                return Ok(&player.card_groups_by_name());
             }
         }
     }
@@ -114,7 +113,7 @@ impl CardGroupId {
     //         }
     //     }
 
-    fn card_group<'a>(&self, game: &'a Game) -> ServiceResult<&'a CardGroup> {
+    fn card_group<'a>(&'a self, game: &'a Game) -> ServiceResult<&'a CardGroup> {
         let owners_card_groups = self.owners_card_groups(game)?;
         let owners_card_groups_names = owners_card_groups
             .keys()
@@ -122,16 +121,11 @@ impl CardGroupId {
             .collect::<Vec<String>>()
             .join(", ");
 
-        if let Some(name) = &self.name {
-            if owners_card_groups.contains_key(name) {
-                return Ok(owners_card_groups.get(name).unwrap());
-            } else {
-                return Err(format!(
-                    "Player hand card group name doesn't match anything. Given: {}. Available: {}",
-                    name, owners_card_groups_names,
-                )
-                .into());
-            }
+        if let Some(ref name) = self.name {
+            return Ok(owners_card_groups.get(name).expect(&format!(
+                "Player hand card group name doesn't match anything. Given: {}. Available: {}",
+                name, owners_card_groups_names
+            )));
         } else if let Some(first_with_cards_of) = &self.first_with_cards_of {
             for card_group_name in first_with_cards_of {
                 if owners_card_groups.contains_key(card_group_name) {
@@ -141,19 +135,17 @@ impl CardGroupId {
                 }
             }
 
-            return Err(format!(
+            return Err(ServiceError::BadRequest(format!(
                 "None of the card groups had any cards in: {}",
                 first_with_cards_of
                     .iter()
                     .map(|k| k.to_string())
                     .collect::<Vec<String>>()
                     .join(", "),
-            ));
+            )));
         }
 
-        return Err(
-            "Invalid card group identifier. Neither name nor 'first_with_cards_of' set".into(),
-        );
+        panic!("Invalid card group identifier. Neither name nor 'first_with_cards_of' set");
     }
 
     //     fn card_group_mut<'a>(&self, game: &'a mut Game) -> ServiceResult<&'a mut CardGroup> {
@@ -375,7 +367,7 @@ enum Condition {
 }
 
 impl Condition {
-    fn met(&self, game: &mut Game) -> Result<bool, String> {
+    fn met(&self, game: &Game) -> ServiceResult<bool> {
         match self {
             Condition::LastPlayedCardRank {
                 card_group_name,
@@ -383,11 +375,16 @@ impl Condition {
             } => {
                 let card_group = card_group_name.card_group(game)?;
                 if let Some(last_card_in_group) = card_group.cards.last() {
-                    Ok(last_card_in_group.rank == CardRank::from_usize(*equals))
+                    if let Some(last_card_in_group_rank) = last_card_in_group.rank_numeric {
+                        Ok(last_card_in_group_rank as usize == *equals)
+                    } else {
+                        Ok(false)
+                    }
                 } else {
                     Ok(false)
                 }
             }
+
             Condition::CardGroupSize {
                 card_group_name,
                 operator,
@@ -400,7 +397,7 @@ impl Condition {
             Condition::TurnCount {
                 operator,
                 compare_to,
-            } => Ok(operator.compare(game.turn_count, *compare_to)),
+            } => Ok(operator.compare(game.turn_count() as usize, *compare_to)),
 
             Condition::CardCount {
                 operator,
@@ -408,14 +405,14 @@ impl Condition {
                 for_players,
             } => {
                 let players_with_card_count =
-                    game.players
+                    game.player_state
                         .iter()
                         .fold(0, |players_with_card_count, player| {
                             if operator.compare(
                                 player
-                                    .hand
+                                    .card_groups_by_name()
                                     .values()
-                                    .map(|hand_card_group| hand_card_group.cards.len())
+                                    .map(|card_group| card_group.cards.len())
                                     .sum(),
                                 *compare_to,
                             ) {
@@ -426,9 +423,11 @@ impl Condition {
                         });
 
                 match for_players {
-                    PlayerCount::AllPlayers => Ok(players_with_card_count == game.players.len()),
+                    PlayerCount::AllPlayers => {
+                        Ok(players_with_card_count == game.player_state.len())
+                    }
                     PlayerCount::AllButOnePlayer => {
-                        Ok((game.players.len() - players_with_card_count) == 1)
+                        Ok((game.player_state.len() - players_with_card_count) == 1)
                     }
                     PlayerCount::SomePlayers { player_count } => {
                         Ok(players_with_card_count == *player_count)
@@ -463,35 +462,35 @@ impl fmt::Display for Action {
     }
 }
 
-// impl Action {
-//     fn available(&self, game: &Game) -> Result<bool, String> {
-//         for condition in self.conditions.iter() {
-//             if !condition.met(game)? {
-//                 return Ok(false);
-//             }
-//         }
-//
-//         // TODO: Check if action is ruled out by any of the active consequences
-//
-//         return Ok(true);
-//     }
-//
-//     pub fn execute(&self, game: &mut Game) -> ServiceResult<()> {
-//         match &self.verb {
-//             Verb::MoveCards(card_move) => {
-//                 card_move.execute(game)?;
-//
-//                 Ok(())
-//             }
-//             Verb::SwapCards(card_swap) => {
-//                 card_swap.execute(game)?;
-//
-//                 Ok(())
-//             }
-//             _ => panic!("AHHHHHHHHHHHHHHHHHHHHHHHH"),
-//         }
-//     }
-// }
+impl Action {
+    fn available(&self, game: &Game) -> ServiceResult<bool> {
+        for condition in self.conditions.iter() {
+            if !condition.met(game)? {
+                return Ok(false);
+            }
+        }
+
+        // TODO: Check if action is ruled out by any of the active consequences
+
+        return Ok(true);
+    }
+
+    //     pub fn execute(&self, game: &mut Game) -> ServiceResult<()> {
+    //         match &self.verb {
+    //             Verb::MoveCards(card_move) => {
+    //                 card_move.execute(game)?;
+    //
+    //                 Ok(())
+    //             }
+    //             Verb::SwapCards(card_swap) => {
+    //                 card_swap.execute(game)?;
+    //
+    //                 Ok(())
+    //             }
+    //             _ => panic!("AHHHHHHHHHHHHHHHHHHHHHHHH"),
+    //         }
+    //     }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TurnRange {

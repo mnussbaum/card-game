@@ -16,6 +16,7 @@ use crate::user::model::{SlimUser, User};
 pub struct GameRecord {
     pub id: i32,
     pub player_turn_index: i32,
+    pub turn_count: i32,
     pub created_at: NaiveDateTime,
 }
 
@@ -67,6 +68,7 @@ impl<'a> GameRecord {
     pub fn create(connection: &PooledConnection) -> ServiceResult<Self> {
         let new_game = NewGame {
             player_turn_index: 0,
+            turn_count: 0,
         };
 
         Ok(diesel::insert_into(games::table)
@@ -91,6 +93,7 @@ impl<'a> GameRecord {
 #[graphql(description = "New game")]
 pub struct NewGame {
     pub player_turn_index: i32,
+    pub turn_count: i32,
 }
 
 #[derive(Debug, Identifiable, Queryable, Associations)]

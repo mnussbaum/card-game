@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::convert::From;
 use std::fs;
 
 use diesel::prelude::*;
@@ -17,79 +16,46 @@ use crate::player::Player;
 use crate::schema::{card_groups, card_groups_cards, cards, games_users, users};
 use crate::user::model::User;
 
-pub struct GameState<'a> {
-    communal_card_groups: HashMap<String, (CardGroupRecord, Vec<Card>)>,
-    game_id: i32,
-    marker: std::marker::PhantomData<&'a ()>,
-    player_state: HashMap<User, HashMap<String, (CardGroupRecord, Vec<Card>)>>,
-}
-
-impl<'a> GameState<'a> {
-    pub fn players(self) -> Vec<Player<'a>> {
-        let game_id = self.game_id;
-
-        self.player_state
-            .into_iter()
-            .map(|(user, card_group_details)| {
-                let card_groups = card_group_details.into_iter().fold(
-                    HashMap::new(),
-                    |mut acc, (card_group_name, (card_group_record, cards))| {
-                        acc.entry(card_group_name)
-                            .or_insert(CardGroup::new(card_group_record, cards));
-
-                        acc
-                    },
-                );
-
-                Player::new(game_id, user, card_groups)
-            })
-            .collect()
-    }
-
-    pub fn communal_card_groups(self) -> Vec<CardGroup<'a>> {
-        self.communal_card_groups
-            .into_iter()
-            .map(|(_, (card_group_record, card_group_cards))| {
-                CardGroup::new(card_group_record, card_group_cards)
-            })
-            .collect()
-    }
-}
-
 pub struct Game<'a> {
-    communal_card_groups: HashMap<String, CardGroup<'a>>,
     record: GameRecord,
+    communal_card_groups: HashMap<String, CardGroup<'a>>,
+    pub player_state: Vec<Player<'a>>,
 }
 
 impl<'a> Game<'a> {
+    pub fn offset_from_current_player_mut(&'a mut self, offset: i32) -> Option<&'a mut Player<'a>> {
+        let player_index =
+            (self.record.player_turn_index + offset) % self.player_state.len() as i32;
+
+        self.player_state.get_mut(player_index as usize)
+    }
+
+    pub fn offset_from_current_player(&'a self, offset: i32) -> Option<&'a Player<'a>> {
+        let player_index =
+            (self.record.player_turn_index + offset) % self.player_state.len() as i32;
+
+        self.player_state.get(player_index as usize)
+    }
+
+    pub fn communal_card_groups(&self) -> &HashMap<String, CardGroup<'a>> {
+        &self.communal_card_groups
+    }
+
     pub fn create_card_group_from_description(
         &mut self,
         description: &CardGroupDescription,
         connection: &PooledConnection,
-    ) -> ServiceResult<&mut CardGroup<'a>> {
-        let card_group_record: CardGroupRecord = diesel::insert_into(card_groups::table)
+    ) -> ServiceResult<CardGroupRecord> {
+        Ok(diesel::insert_into(card_groups::table)
             .values(&NewCardGroupRecord::new_from_description(
                 description,
                 self.record.id,
             ))
             .returning(card_groups::all_columns)
-            .get_result::<CardGroupRecord>(connection)?;
-
-        self.communal_card_groups.insert(
-            card_group_record.name.clone(),
-            CardGroup::new(card_group_record, vec![]),
-        );
-
-        Ok(self
-            .communal_card_groups
-            .get_mut(&description.name)
-            .expect("Just inserted card group is missing on player state"))
+            .get_result::<CardGroupRecord>(connection)?)
     }
 
     pub fn deal(&mut self, connection: &PooledConnection) -> ServiceResult<()> {
-        let game_state = self.state(connection)?;
-        let mut players = game_state.players();
-
         let yams = fs::read_to_string("poo_head_rules.yaml")
             .expect("Something went wrong reading the file");
         let game_rules: GameRules = serde_yaml::from_str(&yams).unwrap();
@@ -97,7 +63,8 @@ impl<'a> Game<'a> {
 
         for player_card_group_description in game_rules.player_hand.iter() {
             let mut players_card_groups_full = false;
-            let mut player_card_groups: Vec<&mut CardGroup> = players
+            let mut player_card_groups: Vec<&mut CardGroup> = self
+                .player_state
                 .iter_mut()
                 .map(|player| {
                     player.create_card_group_from_description(
@@ -136,10 +103,14 @@ impl<'a> Game<'a> {
         }
 
         for communal_card_group_description in game_rules.communal_cards.iter() {
-            self.create_card_group_from_description(communal_card_group_description, connection)?;
+            let card_group_record = self
+                .create_card_group_from_description(communal_card_group_description, connection)?;
+            self.communal_card_groups
+                .entry(card_group_record.name.clone())
+                .or_insert(CardGroup::new(card_group_record, vec![]));
         }
 
-        for communal_card_group in self.communal_card_groups.values_mut() {
+        for (_, communal_card_group) in self.communal_card_groups.iter_mut() {
             loop {
                 let card_group_full =
                     communal_card_group.deal_card_from_deck_if_not_full(&mut deck, connection)?;
@@ -156,10 +127,10 @@ impl<'a> Game<'a> {
         Ok(())
     }
 
-    pub fn state(&self, connection: &PooledConnection) -> ServiceResult<GameState> {
+    pub fn new(record: GameRecord, connection: &PooledConnection) -> ServiceResult<Game<'a>> {
         let mut users = users::table
             .inner_join(games_users::table)
-            .filter(games_users::game_id.eq(self.record.id))
+            .filter(games_users::game_id.eq(record.id))
             .order_by(users::id)
             .select(users::all_columns)
             .get_results::<User>(connection)?;
@@ -214,7 +185,7 @@ impl<'a> Game<'a> {
             }
         }
 
-        let communal_card_group_records = CardGroupRecord::belonging_to(&self.record)
+        let communal_card_group_records = CardGroupRecord::belonging_to(&record)
             .filter(card_groups::user_id.is_null())
             .order_by(card_groups::id.desc())
             .load::<CardGroupRecord>(connection)?;
@@ -234,32 +205,63 @@ impl<'a> Game<'a> {
             .order_by(card_groups::id)
             .load::<(i32, Option<Card>)>(connection)?;
 
-        let communal_cards_by_card_group: HashMap<String, (CardGroupRecord, Vec<Card>)> =
-            communal_card_group_ids_and_cards
-                .into_iter()
-                .group_by(|(card_group_id, _)| *card_group_id)
-                .into_iter()
-                .fold(
+        let communal_card_groups: HashMap<String, CardGroup> = communal_card_group_ids_and_cards
+            .into_iter()
+            .group_by(|(card_group_id, _)| *card_group_id)
+            .into_iter()
+            .fold(
+                HashMap::new(),
+                |mut acc, (card_group_id, card_group_cards_iter)| {
+                    let card_group_cards =
+                        card_group_cards_iter.filter_map(|(_, card)| card).collect();
+                    let card_group_record = communal_card_groups_by_id
+                        .remove(&card_group_id)
+                        .expect("Missing card group indexed by ID");
+
+                    acc.entry(card_group_record.name.to_owned())
+                        .or_insert(CardGroup::new(card_group_record, card_group_cards));
+
+                    acc
+                },
+            );
+
+        let player_state = Game::build_player_state(&record, user_card_groups_cards);
+
+        Ok(Game {
+            record,
+            communal_card_groups: communal_card_groups,
+            player_state,
+        })
+    }
+
+    pub fn build_player_state(
+        game_record: &GameRecord,
+        user_card_groups_cards: HashMap<User, HashMap<String, (CardGroupRecord, Vec<Card>)>>,
+    ) -> Vec<Player<'a>> {
+        user_card_groups_cards
+            .into_iter()
+            .map(|(user, card_group_details)| {
+                let card_groups = card_group_details.into_iter().fold(
                     HashMap::new(),
-                    |mut acc, (card_group_id, card_group_cards_iter)| {
-                        let card_group_cards =
-                            card_group_cards_iter.filter_map(|(_, card)| card).collect();
-                        let card_group = communal_card_groups_by_id
-                            .remove(&card_group_id)
-                            .expect("Missing card group indexed by ID");
-                        acc.entry(card_group.name.to_owned())
-                            .or_insert((card_group, card_group_cards));
+                    |mut acc, (card_group_name, (card_group_record, cards))| {
+                        acc.entry(card_group_name)
+                            .or_insert(CardGroup::new(card_group_record, cards));
 
                         acc
                     },
                 );
 
-        Ok(GameState {
-            communal_card_groups: communal_cards_by_card_group,
-            game_id: self.record.id,
-            player_state: user_card_groups_cards,
-            marker: std::marker::PhantomData,
-        })
+                Player::new(game_record.id, user, card_groups)
+            })
+            .collect()
+    }
+
+    pub fn turn_count(&self) -> i32 {
+        self.record.turn_count
+    }
+
+    pub fn player_turn_index(&self) -> i32 {
+        self.record.player_turn_index
     }
 }
 
@@ -270,26 +272,19 @@ impl<'a> Game<'a> {
         self.record.id
     }
 
-    fn communal_card_groups(&self, context: &Context<'a>) -> FieldResult<Vec<CardGroup>> {
-        let connection = &context.db_pool.get()?;
-        Ok(self.state(connection)?.communal_card_groups())
+    fn communal_card_groups(&self) -> Vec<&CardGroup> {
+        self.communal_card_groups.values().collect()
     }
 
-    fn players(&self, context: &Context<'a>) -> FieldResult<Vec<Player>> {
-        let connection = &context.db_pool.get()?;
-        Ok(self.state(connection)?.players())
+    fn players(&self) -> Vec<&Player> {
+        self.player_state.iter().collect()
     }
 
     fn player_turn_index(&self) -> i32 {
-        self.record.player_turn_index
+        self.player_turn_index()
     }
-}
 
-impl<'a> From<GameRecord> for Game<'a> {
-    fn from(record: GameRecord) -> Game<'a> {
-        return Game {
-            communal_card_groups: HashMap::new(),
-            record,
-        };
+    fn turn_count(&self) -> i32 {
+        self.turn_count()
     }
 }

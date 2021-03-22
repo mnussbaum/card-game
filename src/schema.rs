@@ -49,6 +49,7 @@ table! {
     games (id) {
         id -> Int4,
         player_turn_index -> Int4,
+        turn_count -> Int4,
         created_at -> Timestamp,
     }
 }

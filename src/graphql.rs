@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use itertools::Itertools;
 use juniper::{graphql_object, RootNode};
 use juniper::{EmptySubscription, FieldResult};
 
@@ -67,7 +68,13 @@ impl<'a> QueryRoot<'a> {
             GameRecord::belonging_to_user(connection, user)?
         };
 
-        Ok(game_records.into_iter().map(|g| g.into()).collect())
+        Ok(game_records
+            .into_iter()
+            .map(|game_record| Game::new(game_record, connection))
+            .fold_ok(Vec::new(), |mut acc, game| {
+                acc.push(game);
+                acc
+            })?)
     }
 }
 
@@ -79,18 +86,19 @@ pub struct MutationRoot<'a> {
 impl<'a> MutationRoot<'a> {
     #[graphql(description = "Create a new game")]
     fn create_game(context: &Context<'a>) -> FieldResult<Game> {
-        Ok(GameRecord::create(&context.db_pool.get()?)?.into())
+        let connection = &context.db_pool.get()?;
+        Ok(Game::new(GameRecord::create(connection)?, connection)?)
     }
 
     #[graphql(description = "Add a player to game")]
     fn join_game(context: &Context<'a>, game_id: i32) -> FieldResult<Game> {
         let user = context.authenticated_user()?;
         let connection = &context.db_pool.get()?;
-        let game = GameRecord::find_by_id(connection, game_id)?;
+        let game_record = GameRecord::find_by_id(connection, game_id)?;
 
-        game.join(connection, user)?;
+        game_record.join(connection, user)?;
 
-        Ok(game.into())
+        Ok(Game::new(game_record, connection)?)
     }
 
     #[graphql(description = "Start a game")]
@@ -98,7 +106,7 @@ impl<'a> MutationRoot<'a> {
         let user = context.authenticated_user()?;
         let connection = &context.db_pool.get()?;
         let game_record = GameRecord::find_by_user_and_id(connection, user, id)?;
-        let mut game: Game = game_record.into();
+        let mut game: Game = Game::new(game_record, connection)?;
         game.deal(connection)?;
 
         Ok(game)
