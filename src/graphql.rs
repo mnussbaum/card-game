@@ -102,10 +102,10 @@ impl<'a> MutationRoot<'a> {
     }
 
     #[graphql(description = "Start a game")]
-    fn start_game(context: &Context<'a>, id: i32) -> FieldResult<Game> {
+    fn start_game(context: &Context<'a>, game_id: i32) -> FieldResult<Game> {
         let user = context.authenticated_user()?;
         let connection = &context.db_pool.get()?;
-        let game_record = GameRecord::find_by_user_and_id(connection, user, id)?;
+        let game_record = GameRecord::find_by_user_and_id(connection, user, game_id)?;
         let mut game: Game = Game::new(game_record, connection)?;
         game.deal(connection)?;
 
